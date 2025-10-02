@@ -59,12 +59,12 @@ export default {
       error: null,
       communities: ["fmkorea", "dcinside", "humoruniv", "Etoland", "clien", "ppomppu", "inven", "bobaedream", "ruliweb", "mlbpark", "theqoo", "natepann", "arcalive"],
       sortState: {},
-      globalSortState: 'latest',
+      globalSortState: "latest",
     };
   },
   created() {
-    this.communities.forEach(community => {
-      this.sortState[community] = 'latest';
+    this.communities.forEach((community) => {
+      this.sortState[community] = "latest";
     });
     this.fetchAllCommunities("recent-posts");
   },
@@ -88,7 +88,7 @@ export default {
         })
         .catch((error) => {
           console.error(`Error fetching all ${endpoint}:`, error);
-          this.error = "데이터를 불러오는 데 실패했습니다. 백엔드 서버 상태를 확인해주세요.";
+          this.error = "데이터를 불러오는 데 실패했습니다. 백엔드 서버 상태를 확인해주세요..";
         });
     },
     fetchCommunityData(community, endpoint) {
@@ -108,8 +108,8 @@ export default {
     },
     handleGlobalSortChange() {
       const sortBy = this.globalSortState;
-      
-      this.communities.forEach(community => {
+
+      this.communities.forEach((community) => {
         this.sortState[community] = sortBy;
       });
 
