@@ -72,7 +72,7 @@ export default {
     fetchAllCommunities(endpoint) {
       this.error = null;
 
-      const promises = this.communities.map((community) => axios.get(`${process.env.VUE_APP_API_BASE_URL}/${endpoint}?source=${community}`));
+      const promises = this.communities.map((community) => axios.get(`${process.env.VUE_APP_API_BASE_URL}/glemoa-reader/${endpoint}?source=${community}`));
 
       Promise.all(promises)
         .then((responses) => {
@@ -93,7 +93,7 @@ export default {
     },
     fetchCommunityData(community, endpoint) {
       axios
-        .get(`${process.env.VUE_APP_API_BASE_URL}/${endpoint}?source=${community}`)
+        .get(`${process.env.VUE_APP_API_BASE_URL}/glemoa-reader/${endpoint}?source=${community}`)
         .then((response) => {
           const posts = response.data;
           this.postsByCommunity = {
@@ -157,17 +157,19 @@ export default {
 <style scoped>
 .post-view {
   padding: 20px;
+  color: var(--text-primary);
 }
 
 .main-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px; /* 아래 community-container와의 간격 */
+  margin-bottom: 20px;
 }
 
 .main-header h1 {
   margin: 0;
+  color: var(--text-primary);
 }
 
 .community-container {
@@ -179,20 +181,26 @@ export default {
 .community-block {
   flex: 1 1 350px;
   min-width: 300px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background-color: #f9f9f9;
+  background-color: var(--bg-secondary);
   padding: 15px;
   box-sizing: border-box;
+  transition: background-color 0.3s, border-color 0.3s;
 }
 
 .community-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 2px solid #eee;
+  border-bottom: 2px solid var(--border-color);
   padding-bottom: 10px;
   margin-bottom: 10px;
+  transition: border-color 0.3s;
+}
+
+.community-header h2 {
+  color: var(--text-primary);
 }
 
 .sort-controls {
@@ -207,54 +215,47 @@ export default {
   justify-content: center;
   width: 36px;
   height: 36px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background-color: #f9f9f9;
+  background-color: var(--bg-secondary);
   cursor: pointer;
   font-size: 20px;
-  color: #333;
-  transition: background-color 0.2s, border-color 0.2s;
+  color: var(--text-primary);
+  transition: background-color 0.2s, border-color 0.2s, color 0.3s;
 }
 
 .refresh-btn:hover {
-  background-color: #f0f0f0;
-  border-color: #c0c0c0;
+  background-color: var(--bg-tertiary);
+  border-color: var(--text-secondary);
 }
 
 .sort-select {
-  /* Resetting default styles */
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-
-  /* Custom styles */
-  background-color: #f9f9f9;
-  border: 1px solid #e0e0e0;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 8px 32px 8px 12px;
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
   cursor: pointer;
-
-  /* Custom arrow icon */
   background-image: url("data:image/svg+xml,%3csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M7 10L12 15L17 10' stroke='%234E5968' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 8px center;
   background-size: 16px;
-
-  /* Smooth transitions */
-  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.3s, color 0.3s;
 }
 
 .sort-select:hover {
-  border-color: #c0c0c0;
+  border-color: var(--text-secondary);
 }
 
 .sort-select:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  border-color: var(--link-active-color);
+  box-shadow: 0 0 0 2px var(--link-active-color-translucent, rgba(66, 133, 244, 0.25));
 }
 
 ul {
@@ -265,7 +266,8 @@ ul {
 
 .post-item {
   padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
+  transition: border-color 0.3s;
 }
 
 .post-item:last-child {
@@ -279,7 +281,8 @@ ul {
 
 .post-title a {
   text-decoration: none;
-  color: #333;
+  color: var(--text-primary);
+  transition: color 0.3s;
 }
 
 .post-title a:hover {
@@ -287,7 +290,7 @@ ul {
 }
 
 .comment-count {
-  color: #1a73e8;
+  color: var(--link-active-color);
   font-weight: bold;
   font-size: 0.9em;
   margin-left: 4px;
@@ -295,10 +298,11 @@ ul {
 
 .post-details {
   font-size: 0.8em;
-  color: #666;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  transition: color 0.3s;
 }
 
 .post-details .separator {
