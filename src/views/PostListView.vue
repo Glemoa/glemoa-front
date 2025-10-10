@@ -4,9 +4,9 @@
       <h1>실시간 커뮤니티별 인기글</h1>
       <div class="sort-controls">
         <select v-model="globalSortState" @change="handleGlobalSortChange" class="sort-select">
-          <option value="latest">전체 최신글</option>
-          <option value="recommended">전체 추천순</option>
-          <option value="view_count">전체 조회순</option>
+          <option value="latest">최신글</option>
+          <option value="recommended">오늘의 추천</option>
+          <option value="view_count">오늘의 조회수</option>
         </select>
         <div class="refresh-btn" @click="refreshAllCommunities">&#x21bb;</div>
       </div>
@@ -38,6 +38,7 @@
               <span>조회: {{ post.viewCount }}</span>
               <span class="separator">|</span>
               <span>추천: {{ post.recommendationCount }}</span>
+              <button v-if="isLoggedIn" @click="toggleBookmark(post)" :class="{ bookmarked: bookmarkedPostIds.has(post.id) }" class="bookmark-btn">{{ bookmarkedPostIds.has(post.id) ? "★" : "☆" }}</button>
             </div>
           </li>
         </ul>
@@ -49,7 +50,7 @@
 </template>
 
 <script>
-import axios from "axios";
+import { defaultInstance, authInstance } from "@/api";
 
 export default {
   name: "PostListView",
@@ -60,19 +61,53 @@ export default {
       communities: ["fmkorea", "dcinside", "humoruniv", "Etoland", "clien", "ppomppu", "inven", "bobaedream", "ruliweb", "mlbpark", "theqoo", "natepann", "arcalive"],
       sortState: {},
       globalSortState: "latest",
+      bookmarkedPostIds: new Set(),
+      isLoggedIn: false,
     };
   },
   created() {
+    this.checkLoginStatus();
     this.communities.forEach((community) => {
       this.sortState[community] = "latest";
     });
     this.fetchAllCommunities("recent-posts");
+    if (this.isLoggedIn) {
+      this.fetchBookmarkedPostIds();
+    }
   },
   methods: {
+    checkLoginStatus() {
+      this.isLoggedIn = !!localStorage.getItem("accessToken");
+    },
+    async fetchBookmarkedPostIds() {
+      try {
+        const response = await authInstance.get("/glemoa-member/bookMark/viewBookMaredPostId");
+        this.bookmarkedPostIds = new Set(response.data);
+      } catch (error) {
+        console.error("Error fetching bookmarked post IDs:", error);
+      }
+    },
+    async toggleBookmark(post) {
+      try {
+        await authInstance.post("/glemoa-member/bookMark/doBookMark", { postId: post.id });
+        if (this.bookmarkedPostIds.has(post.id)) {
+          this.bookmarkedPostIds.delete(post.id);
+        } else {
+          this.bookmarkedPostIds.add(post.id);
+        }
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          alert("로그인이 필요합니다.");
+        } else {
+          alert("북마크 추가/삭제에 실패했습니다.");
+          console.error("Bookmark error:", error);
+        }
+      }
+    },
     fetchAllCommunities(endpoint) {
       this.error = null;
 
-      const promises = this.communities.map((community) => axios.get(`${process.env.VUE_APP_API_BASE_URL}/glemoa-reader/${endpoint}?source=${community}`));
+      const promises = this.communities.map((community) => defaultInstance.get(`/glemoa-reader/${endpoint}?source=${community}`));
 
       Promise.all(promises)
         .then((responses) => {
@@ -92,8 +127,8 @@ export default {
         });
     },
     fetchCommunityData(community, endpoint) {
-      axios
-        .get(`${process.env.VUE_APP_API_BASE_URL}/glemoa-reader/${endpoint}?source=${community}`)
+      defaultInstance
+        .get(`/glemoa-reader/${endpoint}?source=${community}`)
         .then((response) => {
           const posts = response.data;
           this.postsByCommunity = {
@@ -307,5 +342,27 @@ ul {
 
 .post-details .separator {
   margin: 0 5px;
+}
+
+.bookmark-btn.bookmarked {
+  color: #ffc107;
+  border-color: #ffc107;
+}
+
+.bookmark-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-left: 8px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  width: 28px; /* Adjust width to fit star */
+  text-align: center;
+}
+
+.bookmark-btn:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--text-secondary);
 }
 </style>

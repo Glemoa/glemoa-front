@@ -6,6 +6,7 @@
       </header>
       <nav>
         <router-link to="/">home</router-link>
+        <router-link v-if="isLoggedIn" to="/bookmarks">Bookmarks</router-link>
         <router-link v-if="!isLoggedIn" to="/login">Login</router-link>
         <a v-else @click="logout" href="#">Logout</a>
         <button @click="toggleTheme" class="theme-toggle-btn">

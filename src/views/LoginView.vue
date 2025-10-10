@@ -12,12 +12,13 @@
       </div>
       <button type="submit">Login</button>
     </form>
+    <button @click="goToRegister" class="register-btn">Register</button>
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
   </div>
 </template>
 
 <script>
-import axios from "axios";
+import { defaultInstance } from "@/api";
 
 export default {
   name: "LoginView",
@@ -31,7 +32,7 @@ export default {
   methods: {
     async handleLogin() {
       try {
-        const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/glemoa-member/member/doLogin`, {
+        const response = await defaultInstance.post("/glemoa-member/member/doLogin", {
           email: this.email,
           password: this.password,
         });
@@ -43,6 +44,9 @@ export default {
         this.errorMessage = "Login failed. Please check your credentials.";
         console.error("Login error:", error);
       }
+    },
+    goToRegister() {
+      this.$router.push("/register");
     },
   },
 };
@@ -121,5 +125,18 @@ button:hover {
   color: #e53e3e;
   margin-top: 15px;
   text-align: center;
+}
+
+.register-btn {
+  margin-top: 10px;
+  width: 100%;
+  max-width: 400px;
+  padding: 15px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
 }
 </style>
