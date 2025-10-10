@@ -80,7 +80,7 @@ form {
 }
 
 label {
-  display: none; /* Hide labels, use placeholders */
+  display: none; /* Hide labels, use placeholders       */
 }
 
 input {
