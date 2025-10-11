@@ -119,12 +119,14 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color 0.3s, color 0.3s;
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 #app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 main {

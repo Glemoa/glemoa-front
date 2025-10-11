@@ -229,6 +229,7 @@ export default {
 .main-header h1 {
   margin: 0;
   color: var(--text-primary);
+  font-size: 1.5em;
 }
 
 .controls {
@@ -247,6 +248,7 @@ export default {
   color: var(--text-primary);
   cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s;
+  white-space: nowrap;
 }
 
 .community-select-btn:hover {
@@ -411,5 +413,33 @@ ul {
 .bookmark-btn:hover {
   background-color: var(--bg-tertiary);
   border-color: var(--text-secondary);
+}
+
+/* Responsive styles for mobile */
+@media (max-width: 600px) {
+  .main-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .main-header h1 {
+    font-size: 1.3em;
+  }
+
+  .controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .community-select-btn {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .sort-select {
+    padding: 8px 28px 8px 10px;
+    font-size: 13px;
+  }
 }
 </style>
