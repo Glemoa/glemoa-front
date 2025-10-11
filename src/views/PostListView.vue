@@ -2,15 +2,21 @@
   <div class="post-view">
     <div class="main-header">
       <h1>실시간 커뮤니티별 인기글</h1>
-      <div class="sort-controls">
-        <select v-model="globalSortState" @change="handleGlobalSortChange" class="sort-select">
-          <option value="latest">최신글</option>
-          <option value="recommended">오늘의 추천</option>
-          <option value="view_count">오늘의 조회수</option>
-        </select>
-        <div class="refresh-btn" @click="refreshAllCommunities">&#x21bb;</div>
+      <div class="controls">
+        <button @click="showCommunitySelector = true" class="community-select-btn">커뮤니티 선택</button>
+        <div class="sort-controls">
+          <select v-model="globalSortState" @change="handleGlobalSortChange" class="sort-select">
+            <option value="latest">최신글</option>
+            <option value="recommended">오늘의 추천</option>
+            <option value="view_count">오늘의 조회수</option>
+          </select>
+          <div class="refresh-btn" @click="refreshAllCommunities">&#x21bb;</div>
+        </div>
       </div>
     </div>
+
+    <CommunitySelector :show="showCommunitySelector" @close="showCommunitySelector = false" @selection-changed="handleSelectionChanged" />
+
     <div v-if="Object.keys(postsByCommunity).length" class="community-container">
       <div v-for="(posts, community) in postsByCommunity" :key="community" class="community-block">
         <div class="community-header">
@@ -51,25 +57,30 @@
 
 <script>
 import { defaultInstance, authInstance } from "@/api";
+import CommunitySelector from "@/components/CommunitySelector.vue";
 
 export default {
   name: "PostListView",
+  components: {
+    CommunitySelector,
+  },
   data() {
     return {
       postsByCommunity: {},
       error: null,
-      communities: ["fmkorea", "dcinside", "humoruniv", "Etoland", "clien", "ppomppu", "inven", "bobaedream", "ruliweb", "mlbpark", "theqoo", "natepann", "arcalive"],
+      communities: [],
+      allCommunities: ["fmkorea", "dcinside", "humoruniv", "Etoland", "clien", "ppomppu", "inven", "bobaedream", "ruliweb", "mlbpark", "theqoo", "natepann", "arcalive"],
       sortState: {},
       globalSortState: "latest",
       bookmarkedPostIds: new Set(),
       isLoggedIn: false,
+      showCommunitySelector: false,
     };
   },
   created() {
     this.checkLoginStatus();
-    this.communities.forEach((community) => {
-      this.sortState[community] = "latest";
-    });
+    this.loadSelectedCommunities();
+    this.initializeSortState();
     this.fetchAllCommunities("recent-posts");
     if (this.isLoggedIn) {
       this.fetchBookmarkedPostIds();
@@ -78,6 +89,29 @@ export default {
   methods: {
     checkLoginStatus() {
       this.isLoggedIn = !!localStorage.getItem("accessToken");
+    },
+    loadSelectedCommunities() {
+      const savedCommunities = localStorage.getItem("selectedCommunities");
+      if (savedCommunities) {
+        this.communities = JSON.parse(savedCommunities);
+      } else {
+        this.communities = [...this.allCommunities];
+      }
+    },
+    initializeSortState() {
+      this.allCommunities.forEach((community) => {
+        this.sortState[community] = "latest";
+      });
+    },
+    handleSelectionChanged(selectedCommunities) {
+      this.communities = selectedCommunities;
+      this.postsByCommunity = {}; // Clear existing posts
+      this.fetchAllCommunities(this.getEndpointForSortState(this.globalSortState));
+    },
+    getEndpointForSortState(sortState) {
+      if (sortState === "recommended") return "today-recommended-posts";
+      if (sortState === "view_count") return "today-view-count-posts";
+      return "recent-posts";
     },
     async fetchBookmarkedPostIds() {
       try {
@@ -106,6 +140,10 @@ export default {
     },
     fetchAllCommunities(endpoint) {
       this.error = null;
+      if (this.communities.length === 0) {
+        this.postsByCommunity = {};
+        return;
+      }
 
       const promises = this.communities.map((community) => defaultInstance.get(`/glemoa-reader/${endpoint}?source=${community}`));
 
@@ -143,31 +181,17 @@ export default {
     },
     handleGlobalSortChange() {
       const sortBy = this.globalSortState;
-
       this.communities.forEach((community) => {
         this.sortState[community] = sortBy;
       });
-
-      if (sortBy === "latest") {
-        this.fetchAllCommunities("recent-posts");
-      } else if (sortBy === "recommended") {
-        this.fetchAllCommunities("today-recommended-posts");
-      } else if (sortBy === "view_count") {
-        this.fetchAllCommunities("today-view-count-posts");
-      }
+      this.fetchAllCommunities(this.getEndpointForSortState(sortBy));
     },
     refreshAllCommunities() {
       this.handleGlobalSortChange();
     },
     handleSortChange(community) {
       const sortBy = this.sortState[community];
-      if (sortBy === "latest") {
-        this.fetchCommunityData(community, "recent-posts");
-      } else if (sortBy === "recommended") {
-        this.fetchCommunityData(community, "today-recommended-posts");
-      } else if (sortBy === "view_count") {
-        this.fetchCommunityData(community, "today-view-count-posts");
-      }
+      this.fetchCommunityData(community, this.getEndpointForSortState(sortBy));
     },
     refreshCommunity(community) {
       this.handleSortChange(community);
@@ -205,6 +229,29 @@ export default {
 .main-header h1 {
   margin: 0;
   color: var(--text-primary);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.community-select-btn {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.community-select-btn:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--text-secondary);
 }
 
 .community-container {
