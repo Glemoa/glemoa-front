@@ -1,18 +1,18 @@
 <template>
   <div class="login-container">
-    <h1>Login</h1>
+    <h1>로그인</h1>
     <form @submit.prevent="handleLogin">
       <div class="form-group">
-        <label for="email">Email</label>
-        <input type="email" id="email" v-model="email" placeholder="Email" required />
+        <label for="email">이메일</label>
+        <input type="email" id="email" v-model="email" placeholder="이메일" required />
       </div>
       <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" id="password" v-model="password" placeholder="Password" required />
+        <label for="password">비밀번호</label>
+        <input type="password" id="password" v-model="password" placeholder="비밀번호" required />
       </div>
-      <button type="submit">Login</button>
+      <button type="submit">로그인</button>
     </form>
-    <button @click="goToRegister" class="register-btn">Register</button>
+    <button @click="goToRegister" class="register-btn">회원가입</button>
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
   </div>
 </template>
@@ -41,7 +41,7 @@ export default {
         localStorage.setItem("refreshToken", refreshToken);
         this.$router.push("/");
       } catch (error) {
-        this.errorMessage = "Login failed. Please check your credentials.";
+        this.errorMessage = "로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.";
         console.error("Login error:", error);
       }
     },
