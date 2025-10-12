@@ -5,12 +5,12 @@
         <h1>Glemoa</h1>
       </header>
       <nav>
-        <router-link to="/">home</router-link>
-        <router-link v-if="isLoggedIn" to="/bookmarks">Bookmarks</router-link>
-        <router-link v-if="!isLoggedIn" to="/login">Login</router-link>
-        <a v-else @click="logout" href="#">Logout</a>
+        <router-link to="/">홈</router-link>
+        <router-link v-if="isLoggedIn" to="/bookmarks">즐겨찾기</router-link>
+        <router-link v-if="!isLoggedIn" to="/login">로그인</router-link>
+        <a v-else @click="logout" href="#">로그아웃</a>
         <button @click="toggleTheme" class="theme-toggle-btn">
-          <img :src="theme === 'light' ? darkModeIcon : lightModeIcon" alt="Toggle theme" :class="theme === 'light' ? 'dark-mode-icon' : 'light-mode-icon'" />
+          <img :src="theme === 'light' ? darkModeIcon : lightModeIcon" alt="테마 변경" :class="theme === 'light' ? 'dark-mode-icon' : 'light-mode-icon'" />
         </button>
       </nav>
     </div>
@@ -125,6 +125,7 @@ body {
   color: var(--text-primary);
   transition: background-color 0.3s, color 0.3s;
   overflow-x: hidden; /* Prevent horizontal scroll */
+  overflow-y: scroll; /* Prevent layout shift */
 }
 
 #app {
@@ -160,6 +161,7 @@ header h1 {
 }
 
 nav {
+  position: relative; /* For absolute positioning of the button */
   background-color: var(--bg-secondary);
   padding: 12px 20px;
   border-bottom: 1px solid var(--border-color);
@@ -171,6 +173,8 @@ nav {
 }
 
 nav a {
+  min-width: 80px; /* Give each link a minimum width */
+  text-align: center; /* Center text within the link */
   font-weight: bold;
   color: var(--text-primary);
   text-decoration: none;
@@ -185,6 +189,8 @@ nav a.router-link-exact-active {
 }
 
 .theme-toggle-btn {
+  position: absolute; /* Position independently */
+  right: 20px; /* Align to the right */
   background: none;
   border: none;
   color: var(--text-primary);

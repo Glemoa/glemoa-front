@@ -1,24 +1,24 @@
 <template>
   <div class="register-container">
-    <h1>Register</h1>
+    <h1>회원가입</h1>
     <form @submit.prevent="handleRegister">
       <div class="form-group">
         <label for="name"></label>
-        <input type="text" id="name" v-model="name" placeholder="Name" required />
+        <input type="text" id="name" v-model="name" placeholder="이름" required />
       </div>
       <div class="form-group">
         <label for="email"></label>
-        <input type="email" id="email" v-model="email" placeholder="Email" required />
+        <input type="email" id="email" v-model="email" placeholder="이메일" required />
       </div>
       <div class="form-group">
         <label for="password"></label>
-        <input type="password" id="password" v-model="password" placeholder="Password" required />
+        <input type="password" id="password" v-model="password" placeholder="비밀번호" required />
       </div>
       <div class="form-group">
         <label for="confirmPassword"></label>
-        <input type="password" id="confirmPassword" v-model="confirmPassword" placeholder="Confirm Password" required />
+        <input type="password" id="confirmPassword" v-model="confirmPassword" placeholder="비밀번호 확인" required />
       </div>
-      <button type="submit">Register</button>
+      <button type="submit">회원가입</button>
     </form>
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
     <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
@@ -46,7 +46,7 @@ export default {
       this.successMessage = "";
 
       if (this.password !== this.confirmPassword) {
-        this.errorMessage = "Passwords do not match.";
+        this.errorMessage = "비밀번호가 일치하지 않습니다.";
         return;
       }
 
@@ -56,12 +56,12 @@ export default {
           email: this.email,
           password: this.password,
         });
-        this.successMessage = "Registration successful! Redirecting to login...";
+        this.successMessage = "회원가입 성공! 로그인 페이지로 이동합니다...";
         setTimeout(() => {
           this.$router.push("/login");
         }, 2000);
       } catch (error) {
-        this.errorMessage = "Registration failed. Please try again.";
+        this.errorMessage = "회원가입에 실패했습니다. 다시 시도해주세요.";
         console.error("Registration error:", error);
       }
     },
@@ -76,6 +76,13 @@ export default {
   justify-content: center;
   align-items: center;
   padding: 20px;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 40px;
 }
 
 form {
@@ -95,6 +102,7 @@ input {
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   font-size: 16px;
+  box-sizing: border-box;
 }
 
 button {
@@ -106,6 +114,7 @@ button {
   border-radius: 8px;
   font-size: 16px;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .error-message {
