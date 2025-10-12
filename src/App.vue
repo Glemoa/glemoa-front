@@ -24,12 +24,17 @@
 </template>
 
 <script>
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import darkModeIcon from "@/assets/images/dark_mode.png";
 import lightModeIcon from "@/assets/images/light_mode.png";
 
 export default {
   name: "App",
+  provide() {
+    return {
+      isLoggedIn: computed(() => this.isLoggedIn),
+    };
+  },
   setup() {
     const theme = ref(localStorage.getItem("theme") || "light");
 
@@ -126,7 +131,6 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 main {

@@ -61,6 +61,7 @@ import CommunitySelector from "@/components/CommunitySelector.vue";
 
 export default {
   name: "PostListView",
+  inject: ["isLoggedIn"],
   components: {
     CommunitySelector,
   },
@@ -73,12 +74,10 @@ export default {
       sortState: {},
       globalSortState: "latest",
       bookmarkedPostIds: new Set(),
-      isLoggedIn: false,
       showCommunitySelector: false,
     };
   },
   created() {
-    this.checkLoginStatus();
     this.loadSelectedCommunities();
     this.initializeSortState();
     this.fetchAllCommunities("recent-posts");
@@ -86,10 +85,19 @@ export default {
       this.fetchBookmarkedPostIds();
     }
   },
-  methods: {
-    checkLoginStatus() {
-      this.isLoggedIn = !!localStorage.getItem("accessToken");
+  watch: {
+    // isLoggedIn의 값이 바뀔 때마다, 그 바뀐 새로운 값이 newVal에 담겨서 함수가 실행되는 것
+    isLoggedIn(newVal) {
+      // 로그인 상태가 변경될 때 북마크 ID를 다시 가져옵니다.
+      if (newVal) {
+        this.fetchBookmarkedPostIds();
+      } else {
+        // 로그아웃 시 북마크 ID를 지웁니다.
+        this.bookmarkedPostIds = new Set();
+      }
     },
+  },
+  methods: {
     loadSelectedCommunities() {
       const savedCommunities = localStorage.getItem("selectedCommunities");
       if (savedCommunities) {
