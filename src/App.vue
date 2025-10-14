@@ -14,9 +14,11 @@
         </button>
       </nav>
     </div>
-    <main>
-      <router-view />
-    </main>
+    <div class="main-content-wrapper">
+      <main>
+        <router-view />
+      </main>
+    </div>
     <footer>
       <p>&copy; 2025 Glemoa</p>
     </footer>
@@ -132,6 +134,10 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+}
+
+.main-content-wrapper {
+  overflow-x: hidden;
 }
 
 main {
