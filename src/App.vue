@@ -18,10 +18,10 @@
       <main>
         <router-view />
       </main>
+      <footer>
+        <p>&copy; 2025 Glemoa</p>
+      </footer>
     </div>
-    <footer>
-      <p>&copy; 2025 Glemoa</p>
-    </footer>
   </div>
 </template>
 
