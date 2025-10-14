@@ -20,7 +20,12 @@
     <div v-if="Object.keys(postsByCommunity).length" class="community-container">
       <div v-for="(posts, community) in postsByCommunity" :key="community" class="community-block">
         <div class="community-header">
-          <h2>{{ community }}</h2>
+          <div class="logo-container">
+            <img :src="communityLogos[community]" :alt="community + ' logo'" class="community-logo" />
+            <span v-if="['mlbpark', 'ruliweb', 'dcinside', 'fmkorea', 'arcalive'].includes(community)" class="community-name-text">
+              {{ community }}
+            </span>
+          </div>
           <div class="sort-controls">
             <select v-model="sortState[community]" @change="handleSortChange(community)" class="sort-select">
               <option value="latest">최신글</option>
@@ -59,6 +64,21 @@
 import { defaultInstance, authInstance } from "@/api";
 import CommunitySelector from "@/components/CommunitySelector.vue";
 
+// Import logos
+import arcalive_logo from "@/assets/images/arcalive_logo.svg";
+import bobaedream_logo from "@/assets/images/bobaedream_logo.png";
+import clien_logo from "@/assets/images/clien_logo.svg";
+import dcinside_logo from "@/assets/images/dcinside_logo.svg";
+import Etoland_logo from "@/assets/images/Etoland_logo.svg";
+import fmkorea_logo from "@/assets/images/fmkorea_logo.svg";
+import humoruniv_logo from "@/assets/images/humoruniv_logo.webp";
+import inven_logo from "@/assets/images/inven_logo.webp";
+import mlbpark_logo from "@/assets/images/mlbpark_logo.png";
+import natepann_logo from "@/assets/images/natepann_logo.svg";
+import ppomppu_logo from "@/assets/images/ppomppu_logo.webp";
+import ruliweb_logo from "@/assets/images/ruliweb_logo.png";
+import theqoo_logo from "@/assets/images/theqoo_logo.svg";
+
 export default {
   name: "PostListView",
   inject: ["isLoggedIn"],
@@ -75,6 +95,21 @@ export default {
       globalSortState: "latest",
       bookmarkedPostIds: new Set(),
       showCommunitySelector: false,
+      communityLogos: {
+        arcalive: arcalive_logo,
+        bobaedream: bobaedream_logo,
+        clien: clien_logo,
+        dcinside: dcinside_logo,
+        Etoland: Etoland_logo,
+        fmkorea: fmkorea_logo,
+        humoruniv: humoruniv_logo,
+        inven: inven_logo,
+        mlbpark: mlbpark_logo,
+        natepann: natepann_logo,
+        ppomppu: ppomppu_logo,
+        ruliweb: ruliweb_logo,
+        theqoo: theqoo_logo,
+      },
     };
   },
   created() {
@@ -86,13 +121,10 @@ export default {
     }
   },
   watch: {
-    // isLoggedIn의 값이 바뀔 때마다, 그 바뀐 새로운 값이 newVal에 담겨서 함수가 실행되는 것
     isLoggedIn(newVal) {
-      // 로그인 상태가 변경될 때 북마크 ID를 다시 가져옵니다.
       if (newVal) {
         this.fetchBookmarkedPostIds();
       } else {
-        // 로그아웃 시 북마크 ID를 지웁니다.
         this.bookmarkedPostIds = new Set();
       }
     },
@@ -113,7 +145,7 @@ export default {
     },
     handleSelectionChanged(selectedCommunities) {
       this.communities = selectedCommunities;
-      this.postsByCommunity = {}; // Clear existing posts
+      this.postsByCommunity = {};
       this.fetchAllCommunities(this.getEndpointForSortState(this.globalSortState));
     },
     getEndpointForSortState(sortState) {
@@ -291,8 +323,21 @@ export default {
   transition: border-color 0.3s;
 }
 
-.community-header h2 {
-  color: var(--text-primary);
+.community-logo {
+  height: 32px; /* Adjust height as needed */
+  width: auto;
+  object-fit: contain;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.community-name-text {
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .sort-controls {
