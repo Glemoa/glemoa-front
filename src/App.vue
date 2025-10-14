@@ -232,4 +232,14 @@ footer {
   width: 100%;
   transition: background-color 0.3s;
 }
+
+/* Special case for clien logo in light mode */
+.light .community-logo[src*="clien"] {
+  filter: brightness(0);
+}
+
+/* Special case for theqoo logo in light mode */
+.light .community-logo[src*="theqoo"] {
+  filter: brightness(0);
+}
 </style>
