@@ -118,35 +118,34 @@ export default {
 }
 
 /* Global styles */
+html,
 body {
   margin: 0;
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Key for app-shell layout: prevent the whole page from scrolling */
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color 0.3s, color 0.3s;
-  overflow-x: hidden; /* Prevent horizontal scroll */
-  overflow-y: scroll; /* Prevent layout shift */
 }
 
 #app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100%; /* Fill the entire viewport height */
+  background-color: var(--bg-primary);
 }
 
-.main-content-wrapper {
-  overflow-x: hidden;
-}
-
-main {
-  flex: 1;
-  padding: 20px;
-}
-
-/* Sticky Header & Nav */
+/* Header & Nav */
 .sticky-header {
+  flex-shrink: 0; /* Prevent header from shrinking */
   position: sticky;
   top: 0;
   z-index: 100;
@@ -167,24 +166,23 @@ header h1 {
 }
 
 nav {
-  position: relative; /* For absolute positioning of the button */
+  position: relative;
   background-color: var(--bg-secondary);
   padding: 12px 20px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: center;
-  align-items: center; /* Center items vertically */
-  gap: 20px; /* Add gap for consistent spacing */
+  align-items: center;
+  gap: 20px;
   transition: background-color 0.3s, border-color 0.3s;
 }
 
 nav a {
-  min-width: 80px; /* Give each link a minimum width */
-  text-align: center; /* Center text within the link */
+  min-width: 80px;
+  text-align: center;
   font-weight: bold;
   color: var(--text-primary);
   text-decoration: none;
-  /* margin is removed to use gap instead */
   padding: 5px 0;
   transition: color 0.3s;
 }
@@ -194,44 +192,20 @@ nav a.router-link-exact-active {
   border-bottom: 2px solid var(--link-active-color);
 }
 
-.theme-toggle-btn {
-  position: absolute; /* Position independently */
-  right: 20px; /* Align to the right */
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  cursor: pointer;
-
-  /* Fixed size container */
-  width: 40px;
-  height: 40px;
-  padding: 0; /* Remove padding */
-
-  /* Center the icon inside */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  border-radius: 50%; /* Optional: make it circular */
-  transition: background-color 0.2s;
+/* Main Content Area */
+.main-content-wrapper {
+  flex: 1; /* Take up all available space */
+  overflow-y: auto; /* Enable vertical scrolling for this container only */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
-.theme-toggle-btn:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.dark-mode-icon {
-  width: 24px;
-  height: 24px;
-}
-
-.light-mode-icon {
-  width: 24px;
-  height: 24px;
+main {
+  padding: 20px;
 }
 
 /* Footer */
 footer {
+  flex-shrink: 0; /* Prevent footer from shrinking */
   background-color: var(--bg-tertiary);
   padding: 15px;
   text-align: center;
@@ -239,12 +213,35 @@ footer {
   transition: background-color 0.3s;
 }
 
-/* Special case for clien logo in light mode */
-.light .community-logo[src*="clien"] {
-  filter: brightness(0);
+.theme-toggle-btn {
+  position: absolute;
+  right: 20px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
 }
 
-/* Special case for theqoo logo in light mode */
+.theme-toggle-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode-icon,
+.light-mode-icon {
+  width: 24px;
+  height: 24px;
+}
+
+/* Special cases for logos */
+.light .community-logo[src*="clien"],
 .light .community-logo[src*="theqoo"] {
   filter: brightness(0);
 }
