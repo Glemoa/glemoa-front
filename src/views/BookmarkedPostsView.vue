@@ -22,6 +22,13 @@
           </div>
         </li>
       </ul>
+      <div class="pagination-container" v-if="pagination.totalPages > 1">
+        <button @click="changePage(pagination.currentPage - 1)" :disabled="pagination.currentPage <= 1">이전</button>
+        <button v-for="page in getVisiblePages()" :key="page" @click="changePage(page)" :class="{ active: page === pagination.currentPage }">
+          {{ page }}
+        </button>
+        <button @click="changePage(pagination.currentPage + 1)" :disabled="pagination.currentPage >= pagination.totalPages">다음</button>
+      </div>
     </div>
     <p v-else-if="error">{{ error }}</p>
     <p v-else>즐겨찾기한 게시글이 없습니다.</p>
@@ -33,20 +40,32 @@ import { authInstance } from "@/api";
 
 export default {
   name: "BookmarkedPostsView",
+  inject: ["settings"],
   data() {
     return {
       posts: [],
       error: null,
+      pagination: {
+        currentPage: 1,
+        pageSize: this.settings?.globalPageSize || 10,
+        totalPages: 1,
+        totalPosts: 0,
+        movablePageCount: 5,
+      },
     };
   },
   created() {
-    this.fetchBookmarkedPosts();
+    this.fetchBookmarkedPosts(this.pagination.currentPage);
   },
   methods: {
-    async fetchBookmarkedPosts() {
+    async fetchBookmarkedPosts(page) {
       try {
-        const response = await authInstance.get("/glemoa-member/bookMark/viewBookMarkPost");
-        this.posts = response.data;
+        const response = await authInstance.get(`/glemoa-member/bookMark/viewBookMarkPost?page=${page}&pageSize=${this.pagination.pageSize}&movablePageCount=${this.pagination.movablePageCount}`);
+        const { postDtoList, postCount } = response.data;
+        this.posts = postDtoList;
+        this.pagination.totalPosts = postCount;
+        this.pagination.totalPages = Math.ceil(postCount / this.pagination.pageSize);
+        this.pagination.currentPage = page;
       } catch (error) {
         console.error("Error fetching bookmarked posts:", error);
         this.error = "즐겨찾기한 게시글을 불러오는 데 실패했습니다.";
@@ -55,11 +74,34 @@ export default {
     async toggleBookmark(post) {
       try {
         await authInstance.post("/glemoa-member/bookMark/doBookMark", { postId: post.id });
-        this.posts = this.posts.filter((p) => p.id !== post.id);
+        // Refresh the current page
+        this.fetchBookmarkedPosts(this.pagination.currentPage);
       } catch (error) {
         alert("북마크 삭제에 실패했습니다.");
         console.error("Bookmark error:", error);
       }
+    },
+    changePage(page) {
+      if (page > 0 && page <= this.pagination.totalPages) {
+        this.fetchBookmarkedPosts(page);
+      }
+    },
+    getVisiblePages() {
+      const { totalPages, currentPage, movablePageCount } = this.pagination;
+      if (totalPages <= 1) return [];
+
+      let startPage = Math.floor((currentPage - 1) / movablePageCount) * movablePageCount + 1;
+      let endPage = startPage + movablePageCount - 1;
+
+      if (endPage > totalPages) {
+        endPage = totalPages;
+      }
+
+      const pages = [];
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+      return pages;
     },
     formatTimeAgo(dateString) {
       const now = new Date();
@@ -91,6 +133,14 @@ export default {
         arcalive: { backgroundColor: "#C0392B", color: "#333" },
       };
       return styles[source] || { backgroundColor: "#7F8C8D", color: "white" }; // Default style
+    },
+  },
+  watch: {
+    "settings.globalPageSize": {
+      handler(newPageSize) {
+        this.pagination.pageSize = newPageSize;
+        this.fetchBookmarkedPosts(1); // Reset to first page
+      },
     },
   },
 };
@@ -166,5 +216,33 @@ h1 {
 .bookmark-btn:hover {
   background-color: var(--bg-tertiary);
   border-color: var(--text-secondary);
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.pagination-container button {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.pagination-container button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.pagination-container button.active {
+    font-weight: bold;
+    border-color: var(--link-active-color);
+    color: var(--link-active-color);
 }
 </style>

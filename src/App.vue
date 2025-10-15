@@ -5,13 +5,16 @@
         <h1>Glemoa</h1>
       </header>
       <nav>
+        <div class="nav-buttons-left">
+          <button @click="showSettingsModal = true" class="settings-btn">≡</button>
+        </div>
         <router-link to="/">홈</router-link>
         <router-link v-if="isLoggedIn" to="/bookmarks">즐겨찾기</router-link>
         <router-link v-if="!isLoggedIn" to="/login">로그인</router-link>
         <a v-else @click="logout" href="#">로그아웃</a>
-        <button @click="toggleTheme" class="theme-toggle-btn">
-          <img :src="theme === 'light' ? darkModeIcon : lightModeIcon" alt="테마 변경" :class="theme === 'light' ? 'dark-mode-icon' : 'light-mode-icon'" />
-        </button>
+        <div class="nav-buttons">
+          <!-- Theme toggle button removed -->
+        </div>
       </nav>
     </div>
     <div class="main-content-wrapper">
@@ -22,28 +25,35 @@
         <p>&copy; 2025 Glemoa</p>
       </footer>
     </div>
+    <SettingsModal
+        :show="showSettingsModal"
+        :currentPageSize="settings.globalPageSize"
+        :currentTheme="theme"
+        @close="showSettingsModal = false"
+        @page-size-changed="handlePageSizeChanged"
+        @set-theme="setTheme"
+    />
   </div>
 </template>
 
 <script>
-import { ref, watch, computed } from "vue";
+import { ref, watch, provide, onMounted, reactive } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import darkModeIcon from "@/assets/images/dark_mode.png";
 import lightModeIcon from "@/assets/images/light_mode.png";
+import SettingsModal from "@/components/SettingsModal.vue";
 
 export default {
   name: "App",
-  provide() {
-    return {
-      isLoggedIn: computed(() => this.isLoggedIn),
-    };
+  components: {
+    SettingsModal,
   },
   setup() {
+    // Theme Management
     const theme = ref(localStorage.getItem("theme") || "light");
-
-    const toggleTheme = () => {
-      theme.value = theme.value === "light" ? "dark" : "light";
+    const setTheme = (newTheme) => {
+      theme.value = newTheme;
     };
-
     watch(
       theme,
       (newTheme, oldTheme) => {
@@ -54,36 +64,58 @@ export default {
         localStorage.setItem("theme", newTheme);
       },
       { immediate: true }
-    ); // immediate: true ensures it runs on component mount
+    );
 
-    return { theme, toggleTheme, darkModeIcon, lightModeIcon };
-  },
-  data() {
-    return {
-      isLoggedIn: false,
+    // Login Status Management
+    const isLoggedIn = ref(false);
+    const route = useRoute();
+    const router = useRouter();
+    const checkLoginStatus = () => {
+      isLoggedIn.value = !!localStorage.getItem("accessToken");
     };
-  },
-  watch: {
-    $route: {
-      immediate: true,
-      handler() {
-        this.checkLoginStatus();
-      },
-    },
-  },
-  methods: {
-    checkLoginStatus() {
-      this.isLoggedIn = !!localStorage.getItem("accessToken");
-    },
-    logout() {
+    const logout = () => {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
-      this.isLoggedIn = false;
-      this.$router.push("/");
-    },
-  },
-  created() {
-    this.checkLoginStatus();
+      isLoggedIn.value = false;
+      router.push("/");
+    };
+    watch(route, checkLoginStatus, { immediate: true, deep: true });
+    onMounted(checkLoginStatus);
+
+    // Settings Modal Management
+    const showSettingsModal = ref(false);
+    const settings = reactive({
+      globalPageSize: 10,
+    });
+    const loadSettings = () => {
+      const savedPageSize = localStorage.getItem("globalPageSize");
+      if (savedPageSize) {
+        settings.globalPageSize = parseInt(savedPageSize, 10);
+      }
+    };
+    const handlePageSizeChanged = (newPageSize) => {
+      settings.globalPageSize = newPageSize;
+      localStorage.setItem("globalPageSize", newPageSize);
+      showSettingsModal.value = false;
+    };
+    onMounted(loadSettings);
+
+    // Provide to child components
+    provide("isLoggedIn", isLoggedIn);
+    provide("settings", settings);
+
+    return {
+      theme,
+      setTheme,
+      isLoggedIn,
+      logout,
+      showSettingsModal,
+      settings,
+      handlePageSizeChanged,
+      // Kept for compatibility with template, though toggle is removed
+      darkModeIcon,
+      lightModeIcon,
+    };
   },
 };
 </script>
@@ -192,6 +224,22 @@ nav a.router-link-exact-active {
   border-bottom: 2px solid var(--link-active-color);
 }
 
+.nav-buttons-left {
+  position: absolute;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-buttons {
+  position: absolute;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 /* Main Content Area */
 .main-content-wrapper {
   flex: 1; /* Take up all available space */
@@ -213,9 +261,7 @@ footer {
   transition: background-color 0.3s;
 }
 
-.theme-toggle-btn {
-  position: absolute;
-  right: 20px;
+.settings-btn, .theme-toggle-btn {
   background: none;
   border: none;
   color: var(--text-primary);
@@ -230,8 +276,12 @@ footer {
   transition: background-color 0.2s;
 }
 
-.theme-toggle-btn:hover {
+.settings-btn:hover, .theme-toggle-btn:hover {
   background-color: rgba(0, 0, 0, 0.1);
+}
+
+.settings-btn {
+  font-size: 22px;
 }
 
 .dark-mode-icon,
