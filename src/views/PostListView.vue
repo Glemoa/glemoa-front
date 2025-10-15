@@ -53,6 +53,13 @@
             </div>
           </li>
         </ul>
+        <div class="pagination-container" v-if="pagination[community] && pagination[community].totalPages > 1">
+          <button @click="changePage(community, pagination[community].currentPage - 1)" :disabled="pagination[community].currentPage <= 1">이전</button>
+          <button v-for="page in getVisiblePages(community)" :key="page" @click="changePage(community, page)" :class="{ active: page === pagination[community].currentPage }">
+            {{ page }}
+          </button>
+          <button @click="changePage(community, pagination[community].currentPage + 1)" :disabled="pagination[community].currentPage >= pagination[community].totalPages">다음</button>
+        </div>
       </div>
     </div>
     <p v-else-if="error">{{ error }}</p>
@@ -81,7 +88,7 @@ import theqoo_logo from "@/assets/images/theqoo_logo.svg";
 
 export default {
   name: "PostListView",
-  inject: ["isLoggedIn"],
+  inject: ["isLoggedIn", "settings"],
   components: {
     CommunitySelector,
   },
@@ -95,6 +102,7 @@ export default {
       globalSortState: "latest",
       bookmarkedPostIds: new Set(),
       showCommunitySelector: false,
+      pagination: {},
       communityLogos: {
         arcalive: arcalive_logo,
         bobaedream: bobaedream_logo,
@@ -115,7 +123,8 @@ export default {
   created() {
     this.loadSelectedCommunities();
     this.initializeSortState();
-    this.fetchAllCommunities("recent-posts");
+    this.initializePagination();
+    this.fetchAllCommunities(this.getEndpointForSortState(this.globalSortState));
     if (this.isLoggedIn) {
       this.fetchBookmarkedPostIds();
     }
@@ -128,8 +137,43 @@ export default {
         this.bookmarkedPostIds = new Set();
       }
     },
+    "settings.globalPageSize": {
+      handler() {
+        this.initializePagination();
+        this.fetchAllCommunities(this.getEndpointForSortState(this.globalSortState));
+      },
+    },
   },
   methods: {
+    getVisiblePages(community) {
+      const pageInfo = this.pagination[community];
+      if (!pageInfo || pageInfo.totalPages <= 1) return [];
+
+      const visiblePageCount = 5;
+      let startPage = Math.floor((pageInfo.currentPage - 1) / visiblePageCount) * visiblePageCount + 1;
+      let endPage = startPage + visiblePageCount - 1;
+
+      if (endPage > pageInfo.totalPages) {
+        endPage = pageInfo.totalPages;
+      }
+
+      const pages = [];
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+      return pages;
+    },
+    initializePagination() {
+      this.allCommunities.forEach(community => {
+        this.pagination[community] = {
+          currentPage: 1,
+          pageSize: this.settings.globalPageSize,
+          totalPosts: 0,
+          totalPages: 1,
+          movablePageCount: 5,
+        };
+      });
+    },
     loadSelectedCommunities() {
       const savedCommunities = localStorage.getItem("selectedCommunities");
       if (savedCommunities) {
@@ -185,44 +229,53 @@ export default {
         return;
       }
 
-      const promises = this.communities.map((community) => defaultInstance.get(`/glemoa-reader/${endpoint}?source=${community}`));
+      const promises = this.communities.map(community => {
+        const pageInfo = this.pagination[community];
+        return defaultInstance.get(`/glemoa-reader/${endpoint}?source=${community}&page=${pageInfo.currentPage}&pageSize=${pageInfo.pageSize}&movablePageCount=${pageInfo.movablePageCount}`);
+      });
 
       Promise.all(promises)
-        .then((responses) => {
-          const groupedPosts = responses.reduce((acc, response) => {
-            const posts = response.data;
-            if (posts && posts.length > 0) {
-              const communityName = posts[0].source;
-              acc[communityName] = posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            }
-            return acc;
-          }, {});
-          this.postsByCommunity = groupedPosts;
-        })
-        .catch((error) => {
-          console.error(`Error fetching all ${endpoint}:`, error);
-          this.error = "데이터를 불러오는 데 실패했습니다. 백엔드 서버 상태를 확인해주세요..";
-        });
+          .then(responses => {
+            const groupedPosts = {};
+            responses.forEach((response, index) => {
+              const community = this.communities[index];
+              const { postDtoList, postCount } = response.data;
+              groupedPosts[community] = postDtoList;
+              this.pagination[community].totalPosts = postCount;
+              this.pagination[community].totalPages = Math.ceil(postCount / this.pagination[community].pageSize);
+            });
+            this.postsByCommunity = groupedPosts;
+          })
+          .catch(error => {
+            console.error(`Error fetching all ${endpoint}:`, error);
+            this.error = "데이터를 불러오는 데 실패했습니다. 백엔드 서버 상태를 확인해주세요..";
+          });
     },
     fetchCommunityData(community, endpoint) {
+      let url = `/glemoa-reader/${endpoint}?source=${community}`;
+      const pageInfo = this.pagination[community];
+      url += `&page=${pageInfo.currentPage}&pageSize=${pageInfo.pageSize}&movablePageCount=${pageInfo.movablePageCount}`;
+
       defaultInstance
-        .get(`/glemoa-reader/${endpoint}?source=${community}`)
-        .then((response) => {
-          const posts = response.data;
-          this.postsByCommunity = {
-            ...this.postsByCommunity,
-            [community]: posts && posts.length > 0 ? posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) : [],
-          };
-        })
-        .catch((error) => {
-          console.error(`Error fetching ${endpoint} for ${community}:`, error);
-          alert(`${community} 게시글을 불러오는 중 오류가 발생했습니다.`);
-        });
+          .get(url)
+          .then(response => {
+            const { postDtoList, postCount } = response.data;
+            this.postsByCommunity[community] = postDtoList;
+            this.pagination[community].totalPosts = postCount;
+            this.pagination[community].totalPages = Math.ceil(postCount / this.pagination[community].pageSize);
+          })
+          .catch(error => {
+            console.error(`Error fetching ${endpoint} for ${community}:`, error);
+            alert(`${community} 게시글을 불러오는 중 오류가 발생했습니다.`);
+          });
     },
     handleGlobalSortChange() {
       const sortBy = this.globalSortState;
-      this.communities.forEach((community) => {
+      this.communities.forEach(community => {
         this.sortState[community] = sortBy;
+        if (this.pagination[community]) {
+          this.pagination[community].currentPage = 1;
+        }
       });
       this.fetchAllCommunities(this.getEndpointForSortState(sortBy));
     },
@@ -230,11 +283,20 @@ export default {
       this.handleGlobalSortChange();
     },
     handleSortChange(community) {
+      if (this.pagination[community]) {
+        this.pagination[community].currentPage = 1;
+      }
       const sortBy = this.sortState[community];
       this.fetchCommunityData(community, this.getEndpointForSortState(sortBy));
     },
     refreshCommunity(community) {
       this.handleSortChange(community);
+    },
+    changePage(community, newPage) {
+      if (newPage > 0 && newPage <= this.pagination[community].totalPages) {
+        this.pagination[community].currentPage = newPage;
+        this.fetchCommunityData(community, this.getEndpointForSortState(this.sortState[community]));
+      }
     },
     formatTimeAgo(dateString) {
       const now = new Date();
@@ -279,16 +341,19 @@ export default {
 }
 
 .community-select-btn {
+  padding: 8px 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.community-select-btn {
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  padding: 8px 12px;
   font-size: 14px;
-  font-weight: 500;
   color: var(--text-primary);
   cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s;
-  white-space: nowrap;
 }
 
 .community-select-btn:hover {
@@ -466,6 +531,34 @@ ul {
 .bookmark-btn:hover {
   background-color: var(--bg-tertiary);
   border-color: var(--text-secondary);
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.pagination-container button {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.pagination-container button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.pagination-container button.active {
+    font-weight: bold;
+    border-color: var(--link-active-color);
+    color: var(--link-active-color);
 }
 
 /* Responsive styles for mobile */
