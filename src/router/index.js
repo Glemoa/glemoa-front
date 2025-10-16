@@ -3,6 +3,7 @@ import PostListView from "../views/PostListView.vue";
 import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
 import BookmarkedPostsView from "../views/BookmarkedPostsView.vue";
+import SearchView from "../views/SearchView.vue"; // Import SearchView
 
 const routes = [
   {
@@ -25,6 +26,11 @@ const routes = [
     name: "BookmarkedPosts",
     component: BookmarkedPostsView,
     meta: { requiresAuth: true },
+  },
+  {
+    path: "/search", // Add search route
+    name: "Search",
+    component: SearchView,
   },
 ];
 
