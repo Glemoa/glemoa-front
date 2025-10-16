@@ -2,7 +2,10 @@
   <div id="app">
     <div class="sticky-header">
       <header>
-        <h1>Glemoa</h1>
+        <div class="search-container">
+          <input type="text" v-model="searchKeyword" @keyup.enter="performSearch" placeholder="Glemoa에서 검색..." class="search-input" />
+          <button @click="performSearch" class="search-button"><img class="search-icon" :src="researchIcon" alt="Search" /></button>
+        </div>
       </header>
       <nav>
         <div class="nav-buttons-left">
@@ -25,14 +28,7 @@
         <p>&copy; 2025 Glemoa</p>
       </footer>
     </div>
-    <SettingsModal
-        :show="showSettingsModal"
-        :currentPageSize="settings.globalPageSize"
-        :currentTheme="theme"
-        @close="showSettingsModal = false"
-        @page-size-changed="handlePageSizeChanged"
-        @set-theme="setTheme"
-    />
+    <SettingsModal :show="showSettingsModal" :currentPageSize="settings.globalPageSize" :currentTheme="theme" @close="showSettingsModal = false" @page-size-changed="handlePageSizeChanged" @set-theme="setTheme" />
   </div>
 </template>
 
@@ -41,6 +37,7 @@ import { ref, watch, provide, onMounted, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import darkModeIcon from "@/assets/images/dark_mode.png";
 import lightModeIcon from "@/assets/images/light_mode.png";
+import researchIcon from "@/assets/images/research.svg";
 import SettingsModal from "@/components/SettingsModal.vue";
 
 export default {
@@ -104,6 +101,15 @@ export default {
     provide("isLoggedIn", isLoggedIn);
     provide("settings", settings);
 
+    // Search Management
+    const searchKeyword = ref("");
+    const performSearch = () => {
+      if (searchKeyword.value.trim()) {
+        router.push({ name: "Search", query: { keyword: searchKeyword.value.trim() } });
+        searchKeyword.value = ""; // Clear input after search
+      }
+    };
+
     return {
       theme,
       setTheme,
@@ -112,9 +118,12 @@ export default {
       showSettingsModal,
       settings,
       handlePageSizeChanged,
+      searchKeyword,
+      performSearch,
       // Kept for compatibility with template, though toggle is removed
       darkModeIcon,
       lightModeIcon,
+      researchIcon,
     };
   },
 };
@@ -188,13 +197,70 @@ header {
   background-color: var(--header-bg);
   color: var(--header-text);
   padding: 15px 20px;
-  text-align: center;
+  display: flex; /* Use flexbox for centering */
+  justify-content: center; /* Center horizontally */
+  align-items: center; /* Center vertically */
   transition: background-color 0.3s, color 0.3s;
 }
 
-header h1 {
-  margin: 0;
-  font-size: 1.5em;
+.search-container {
+  display: flex;
+  align-items: center;
+  width: 50%;
+  max-width: 600px;
+  /* ⭐️ 흰색 배경을 설정합니다. (컨테이너 내 여백 부분) */
+  background-color: var(--bg-primary);
+  /* ⭐️ input/button 주변에 여백을 만듭니다. (디시 스타일의 핵심) */
+  padding: 5px;
+  /* 테두리 색상도 이미지와 유사하게 진한 색으로 변경 */
+  border: 2px solid var(--link-active-color);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.search-input {
+  flex-grow: 1;
+  padding: 12px 20px;
+  /* ⭐️ 자체 테두리 제거. 컨테이너의 테두리를 공유 */
+  border: none;
+  /* ⭐️ 둥근 모서리 제거 */
+  border-radius: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 1em;
+  outline: none;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--link-active-color);
+  width: 250px;
+}
+
+.search-button {
+  padding: 12px 15px;
+  border: none;
+  background-color: var(--link-active-color); /* Blue background */
+  color: white; /* White icon/text */
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.search-icon {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) invert(1); /* Turns black SVG to white */
+}
+
+.search-button:hover {
+  opacity: 0.9;
+}
+
+/* Responsive styles for mobile */
+@media (max-width: 600px) {
+  .search-container {
+    width: 65%; /* Make search bar wider on mobile */
+  }
 }
 
 nav {
@@ -261,7 +327,8 @@ footer {
   transition: background-color 0.3s;
 }
 
-.settings-btn, .theme-toggle-btn {
+.settings-btn,
+.theme-toggle-btn {
   background: none;
   border: none;
   color: var(--text-primary);
@@ -276,7 +343,8 @@ footer {
   transition: background-color 0.2s;
 }
 
-.settings-btn:hover, .theme-toggle-btn:hover {
+.settings-btn:hover,
+.theme-toggle-btn:hover {
   background-color: rgba(0, 0, 0, 0.1);
 }
 

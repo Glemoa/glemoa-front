@@ -1,0 +1,618 @@
+<template>
+  <div class="post-view">
+    <div class="main-header">
+      <h1>'{{ keyword }}'에 대한 검색 결과</h1>
+      <div class="controls">
+        <button @click="showCommunitySelector = true" class="community-select-btn">커뮤니티 선택</button>
+        <div class="sort-controls">
+          <select v-model="globalSortState" @change="handleGlobalSortChange" class="sort-select">
+            <option value="latest">최신순</option>
+            <option value="recommended">추천순</option>
+            <option value="view_count">조회수순</option>
+          </select>
+          <div class="refresh-btn" @click="refreshAllCommunities">&#x21bb;</div>
+        </div>
+      </div>
+    </div>
+
+    <CommunitySelector :show="showCommunitySelector" @close="showCommunitySelector = false" @selection-changed="handleSelectionChanged" />
+
+    <div v-if="Object.keys(postsByCommunity).length" class="community-container">
+      <div v-for="(posts, community) in postsByCommunity" :key="community" class="community-block">
+        <div class="community-header">
+          <div class="logo-container">
+            <img :src="communityLogos[community]" :alt="community + ' logo'" class="community-logo" />
+            <span v-if="['mlbpark', 'ruliweb', 'dcinside', 'fmkorea', 'arcalive'].includes(community)" class="community-name-text">
+              {{ community }}
+            </span>
+          </div>
+          <div class="sort-controls">
+            <select v-model="sortState[community]" @change="handleSortChange(community)" class="sort-select">
+              <option value="latest">최신순</option>
+              <option value="recommended">추천순</option>
+              <option value="view_count">조회수순</option>
+            </select>
+            <div class="refresh-btn" @click="refreshCommunity(community)">&#x21bb;</div>
+          </div>
+        </div>
+        <ul>
+          <li v-for="post in posts" :key="post.id + post.source" class="post-item">
+            <div class="post-title">
+              <a :href="post.link" target="_blank" v-html="highlightKeyword(post.title)"></a>
+              <span class="comment-count"> [{{ post.commentCount }}]</span>
+            </div>
+            <div class="post-details">
+              <span>{{ post.author }}</span>
+              <span class="separator">|</span>
+              <span>{{ formatTimeAgo(post.createdAt) }}</span>
+              <span class="separator">|</span>
+              <span>조회: {{ post.viewCount }}</span>
+              <span class="separator">|</span>
+              <span>추천: {{ post.recommendationCount }}</span>
+              <button v-if="isLoggedIn" @click="toggleBookmark(post)" :class="{ bookmarked: bookmarkedPostIds.has(post.id) }" class="bookmark-btn">{{ bookmarkedPostIds.has(post.id) ? "★" : "☆" }}</button>
+            </div>
+          </li>
+        </ul>
+        <div class="pagination-container" v-if="pagination[community] && pagination[community].totalPages > 1">
+          <button @click="changePage(community, pagination[community].currentPage - 1)" :disabled="pagination[community].currentPage <= 1">이전</button>
+          <button v-for="page in getVisiblePages(community)" :key="page" @click="changePage(community, page)" :class="{ active: page === pagination[community].currentPage }">
+            {{ page }}
+          </button>
+          <button @click="changePage(community, pagination[community].currentPage + 1)" :disabled="pagination[community].currentPage >= pagination[community].totalPages">다음</button>
+        </div>
+      </div>
+    </div>
+    <p v-else-if="error">{{ error }}</p>
+    <p v-else>검색 결과를 불러오는 중...</p>
+  </div>
+</template>
+
+<script>
+import { defaultInstance, authInstance } from "@/api";
+import CommunitySelector from "@/components/CommunitySelector.vue";
+
+// Import logos
+import arcalive_logo from "@/assets/images/arcalive_logo.svg";
+import bobaedream_logo from "@/assets/images/bobaedream_logo.png";
+import clien_logo from "@/assets/images/clien_logo.svg";
+import dcinside_logo from "@/assets/images/dcinside_logo.svg";
+import Etoland_logo from "@/assets/images/Etoland_logo.svg";
+import fmkorea_logo from "@/assets/images/fmkorea_logo.svg";
+import humoruniv_logo from "@/assets/images/humoruniv_logo.webp";
+import inven_logo from "@/assets/images/inven_logo.webp";
+import mlbpark_logo from "@/assets/images/mlbpark_logo.png";
+import natepann_logo from "@/assets/images/natepann_logo.svg";
+import ppomppu_logo from "@/assets/images/ppomppu_logo.webp";
+import ruliweb_logo from "@/assets/images/ruliweb_logo.png";
+import theqoo_logo from "@/assets/images/theqoo_logo.svg";
+
+export default {
+  name: "SearchView",
+  inject: ["isLoggedIn", "settings"],
+  components: {
+    CommunitySelector,
+  },
+  data() {
+    return {
+      keyword: "",
+      postsByCommunity: {},
+      error: null,
+      communities: [],
+      allCommunities: ["fmkorea", "dcinside", "humoruniv", "Etoland", "clien", "ppomppu", "inven", "bobaedream", "ruliweb", "mlbpark", "theqoo", "natepann", "arcalive"],
+      globalSortState: "latest",
+      sortState: {},
+      bookmarkedPostIds: new Set(),
+      showCommunitySelector: false,
+      pagination: {},
+      communityLogos: {
+        arcalive: arcalive_logo,
+        bobaedream: bobaedream_logo,
+        clien: clien_logo,
+        dcinside: dcinside_logo,
+        Etoland: Etoland_logo,
+        fmkorea: fmkorea_logo,
+        humoruniv: humoruniv_logo,
+        inven: inven_logo,
+        mlbpark: mlbpark_logo,
+        natepann: natepann_logo,
+        ppomppu: ppomppu_logo,
+        ruliweb: ruliweb_logo,
+        theqoo: theqoo_logo,
+      },
+    };
+  },
+  created() {
+    this.loadSelectedCommunities();
+    this.initializePagination();
+    this.initializeSortState();
+    this.keyword = this.$route.query.keyword || "";
+    if (this.keyword) {
+      this.fetchSearchResults();
+    }
+    if (this.isLoggedIn) {
+      this.fetchBookmarkedPostIds();
+    }
+  },
+  watch: {
+    '$route.query.keyword'(newKeyword) {
+      this.keyword = newKeyword || "";
+      if (this.keyword) {
+        this.initializePagination();
+        this.fetchSearchResults();
+      } else {
+        this.postsByCommunity = {};
+      }
+    },
+    isLoggedIn(newVal) {
+      if (newVal) {
+        this.fetchBookmarkedPostIds();
+      } else {
+        this.bookmarkedPostIds = new Set();
+      }
+    },
+    "settings.globalPageSize": {
+      handler() {
+        this.initializePagination();
+        this.fetchSearchResults();
+      },
+    },
+  },
+  methods: {
+    getVisiblePages(community) {
+      const pageInfo = this.pagination[community];
+      if (!pageInfo || pageInfo.totalPages <= 1) return [];
+
+      const visiblePageCount = 5;
+      let startPage = Math.floor((pageInfo.currentPage - 1) / visiblePageCount) * visiblePageCount + 1;
+      let endPage = startPage + visiblePageCount - 1;
+
+      if (endPage > pageInfo.totalPages) {
+        endPage = pageInfo.totalPages;
+      }
+
+      const pages = [];
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+      return pages;
+    },
+    initializePagination() {
+      this.allCommunities.forEach(community => {
+        this.pagination[community] = {
+          currentPage: 1,
+          pageSize: this.settings.globalPageSize,
+          totalPosts: 0,
+          totalPages: 1,
+          movablePageCount: 5,
+        };
+      });
+    },
+    loadSelectedCommunities() {
+      const savedCommunities = localStorage.getItem("selectedCommunities");
+      if (savedCommunities) {
+        this.communities = JSON.parse(savedCommunities);
+      } else {
+        this.communities = [...this.allCommunities];
+      }
+    },
+    handleSelectionChanged(selectedCommunities) {
+      this.communities = selectedCommunities;
+      this.postsByCommunity = {};
+      this.fetchSearchResults();
+    },
+    async fetchBookmarkedPostIds() {
+      try {
+        const response = await authInstance.get("/glemoa-member/bookMark/viewBookMaredPostId");
+        this.bookmarkedPostIds = new Set(response.data);
+      } catch (error) {
+        console.error("Error fetching bookmarked post IDs:", error);
+      }
+    },
+        async toggleBookmark(post) {
+          try {
+            await authInstance.post("/glemoa-member/bookMark/doBookMark", { postId: post.id });
+            if (this.bookmarkedPostIds.has(post.id)) {
+              this.bookmarkedPostIds.delete(post.id);
+            } else {
+              this.bookmarkedPostIds.add(post.id);
+            }
+          } catch (error) {
+            if (error.response && error.response.status === 401) {
+              alert("로그인이 필요합니다.");
+            } else {
+              alert("북마크 추가/삭제에 실패했습니다.");
+              console.error("Bookmark error:", error);
+            }
+          }
+        },
+    
+        initializeSortState() {
+          this.allCommunities.forEach((community) => {
+            this.sortState[community] = "latest";
+          });
+        },
+    
+        handleSortChange(community) {
+          if (this.pagination[community]) {
+            this.pagination[community].currentPage = 1;
+          }
+          this.searchCommunityData(community);
+        },
+    
+        getEndpointForSearch(sortState) {
+          switch (sortState) {
+            case 'recommended':
+              return 'search-today-recommended-posts';
+            case 'view_count':
+              return 'search-today-view-count-posts';
+            case 'latest':
+            default:
+              return 'search-posts';
+          }
+        },
+    handleGlobalSortChange() {
+      this.communities.forEach(community => {
+        if (this.pagination[community]) {
+          this.pagination[community].currentPage = 1;
+        }
+      });
+      this.fetchSearchResults();
+    },
+    refreshAllCommunities() {
+      this.handleGlobalSortChange();
+    },
+    fetchSearchResults() {
+      const endpoint = this.getEndpointForSearch(this.globalSortState);
+      this.error = null;
+      if (this.communities.length === 0 || !this.keyword) {
+        this.postsByCommunity = {};
+        return;
+      }
+
+      const promises = this.communities.map(community => {
+        const pageInfo = this.pagination[community];
+        return defaultInstance.get(`/glemoa-reader/${endpoint}?keyword=${this.keyword}&source=${community}&page=${pageInfo.currentPage}&pageSize=${pageInfo.pageSize}&movablePageCount=${pageInfo.movablePageCount}`);
+      });
+
+      Promise.all(promises)
+          .then(responses => {
+            const groupedPosts = {};
+            responses.forEach((response, index) => {
+              const community = this.communities[index];
+              const { postDtoList, postCount } = response.data;
+              groupedPosts[community] = postDtoList;
+              this.pagination[community].totalPosts = postCount;
+              this.pagination[community].totalPages = Math.ceil(postCount / this.pagination[community].pageSize);
+            });
+            this.postsByCommunity = groupedPosts;
+          })
+          .catch(error => {
+            console.error(`Error searching all communities with endpoint ${endpoint}:`, error);
+            this.error = "검색 결과를 불러오는 데 실패했습니다. 백엔드 서버 상태를 확인해주세요..";
+          });
+    },
+    searchCommunityData(community) {
+      const sortState = this.sortState[community] || this.globalSortState;
+      const endpoint = this.getEndpointForSearch(sortState);
+      const pageInfo = this.pagination[community];
+      let url = `/glemoa-reader/${endpoint}?keyword=${this.keyword}&source=${community}&page=${pageInfo.currentPage}&pageSize=${pageInfo.pageSize}&movablePageCount=${pageInfo.movablePageCount}`;
+
+      defaultInstance
+          .get(url)
+          .then(response => {
+            const { postDtoList, postCount } = response.data;
+            this.postsByCommunity[community] = postDtoList;
+            this.pagination[community].totalPosts = postCount;
+            this.pagination[community].totalPages = Math.ceil(postCount / this.pagination[community].pageSize);
+          })
+          .catch(error => {
+            console.error(`Error searching for ${community}:`, error);
+            alert(`${community} 검색 결과를 불러오는 중 오류가 발생했습니다.`);
+          });
+    },
+    refreshCommunity(community) {
+      this.handleSortChange(community);
+    },
+    changePage(community, newPage) {
+      if (newPage > 0 && newPage <= this.pagination[community].totalPages) {
+        this.pagination[community].currentPage = newPage;
+        this.searchCommunityData(community);
+      }
+    },
+    highlightKeyword(title) {
+      if (!this.keyword || !title) return title;
+      const regex = new RegExp(this.keyword, 'gi');
+      return title.replace(regex, (match) => `<span class="highlight">${match}</span>`);
+    },
+    formatTimeAgo(dateString) {
+      const now = new Date();
+      const postDate = new Date(dateString);
+      const seconds = Math.floor((now - postDate) / 1000);
+
+      if (seconds < 60) return `${seconds}초 전`;
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes}분 전`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours}시간 전`;
+      const days = Math.floor(hours / 24);
+      return `${days}일 전`;
+    },
+  },
+};
+</script>
+
+<style scoped>
+/* Styles are copied from PostListView, can be refactored into a shared CSS file if needed */
+.post-view {
+  padding: 20px;
+  color: var(--text-primary);
+}
+
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.main-header h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.5em;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.community-select-btn {
+  padding: 8px 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.community-select-btn {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.community-select-btn:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--text-secondary);
+}
+
+.community-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.community-block {
+  flex: 1 1 350px;
+  min-width: 300px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  padding: 15px;
+  box-sizing: border-box;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.community-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  transition: border-color 0.3s;
+}
+
+.community-logo {
+  height: 32px; /* Adjust height as needed */
+  width: auto;
+  object-fit: contain;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.community-name-text {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  cursor: pointer;
+  font-size: 20px;
+  color: var(--text-primary);
+  transition: background-color 0.2s, border-color 0.2s, color 0.3s;
+}
+
+.refresh-btn:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--text-secondary);
+}
+
+ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.post-item {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  transition: border-color 0.3s;
+}
+
+.post-item:last-child {
+  border-bottom: none;
+}
+
+.post-title {
+  font-size: 0.95em;
+  margin-bottom: 4px;
+}
+
+.post-title a {
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: color 0.3s;
+}
+
+.post-title a:hover {
+  text-decoration: underline;
+}
+
+.comment-count {
+  color: var(--link-active-color);
+  font-weight: bold;
+  font-size: 0.9em;
+  margin-left: 4px;
+}
+
+.post-details {
+  font-size: 0.8em;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  transition: color 0.3s;
+}
+
+.post-details .separator {
+  margin: 0 5px;
+}
+
+.bookmark-btn.bookmarked {
+  color: #ffc107;
+  border-color: #ffc107;
+}
+
+.bookmark-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-left: 8px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  width: 28px; /* Adjust width to fit star */
+  text-align: center;
+}
+
+.bookmark-btn:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--text-secondary);
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.pagination-container button {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.pagination-container button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.pagination-container button.active {
+    font-weight: bold;
+    border-color: var(--link-active-color);
+    color: var(--link-active-color);
+}
+
+/* Responsive styles for mobile */
+@media (max-width: 600px) {
+  .main-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .main-header h1 {
+    font-size: 1.3em;
+  }
+
+  .controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .community-select-btn {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+}
+
+.post-title a :deep(.highlight) {
+  color: var(--link-active-color);
+  font-weight: bold;
+}
+
+.sort-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 32px 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M7 10L12 15L17 10' stroke='%234E5968' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.3s, color 0.3s;
+}
+
+.sort-select:hover {
+  border-color: var(--text-secondary);
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: var(--link-active-color);
+  box-shadow: 0 0 0 2px var(--link-active-color-translucent, rgba(66, 133, 244, 0.25));
+}
+</style>
