@@ -7,8 +7,8 @@
         <div class="sort-controls">
           <select v-model="globalSortState" @change="handleGlobalSortChange" class="sort-select">
             <option value="latest">최신순</option>
-            <option value="recommended">추천순</option>
-            <option value="view_count">조회수순</option>
+            <option value="recommended">오늘의 추천</option>
+            <option value="view_count">오늘의 조회수</option>
           </select>
           <div class="refresh-btn" @click="refreshAllCommunities">&#x21bb;</div>
         </div>
@@ -29,8 +29,8 @@
           <div class="sort-controls">
             <select v-model="sortState[community]" @change="handleSortChange(community)" class="sort-select">
               <option value="latest">최신순</option>
-              <option value="recommended">추천순</option>
-              <option value="view_count">조회수순</option>
+              <option value="recommended">오늘의 추천</option>
+              <option value="view_count">오늘의 조회수</option>
             </select>
             <div class="refresh-btn" @click="refreshCommunity(community)">&#x21bb;</div>
           </div>
@@ -134,7 +134,7 @@ export default {
     }
   },
   watch: {
-    '$route.query.keyword'(newKeyword) {
+    "$route.query.keyword"(newKeyword) {
       this.keyword = newKeyword || "";
       if (this.keyword) {
         this.initializePagination();
@@ -177,7 +177,7 @@ export default {
       return pages;
     },
     initializePagination() {
-      this.allCommunities.forEach(community => {
+      this.allCommunities.forEach((community) => {
         this.pagination[community] = {
           currentPage: 1,
           pageSize: this.settings.globalPageSize,
@@ -208,50 +208,50 @@ export default {
         console.error("Error fetching bookmarked post IDs:", error);
       }
     },
-        async toggleBookmark(post) {
-          try {
-            await authInstance.post("/glemoa-member/bookMark/doBookMark", { postId: post.id });
-            if (this.bookmarkedPostIds.has(post.id)) {
-              this.bookmarkedPostIds.delete(post.id);
-            } else {
-              this.bookmarkedPostIds.add(post.id);
-            }
-          } catch (error) {
-            if (error.response && error.response.status === 401) {
-              alert("로그인이 필요합니다.");
-            } else {
-              alert("북마크 추가/삭제에 실패했습니다.");
-              console.error("Bookmark error:", error);
-            }
-          }
-        },
-    
-        initializeSortState() {
-          this.allCommunities.forEach((community) => {
-            this.sortState[community] = "latest";
-          });
-        },
-    
-        handleSortChange(community) {
-          if (this.pagination[community]) {
-            this.pagination[community].currentPage = 1;
-          }
-          this.searchCommunityData(community);
-        },
-    
-        getEndpointForSearch(sortState) {
-          switch (sortState) {
-            case 'recommended':
-              return 'search-today-recommended-posts';
-            case 'view_count':
-              return 'search-today-view-count-posts';
-            case 'latest':
-            default:
-              return 'search-posts';
-          }
-        },
+    async toggleBookmark(post) {
+      try {
+        await authInstance.post("/glemoa-member/bookMark/doBookMark", { postId: post.id });
+        if (this.bookmarkedPostIds.has(post.id)) {
+          this.bookmarkedPostIds.delete(post.id);
+        } else {
+          this.bookmarkedPostIds.add(post.id);
+        }
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          alert("로그인이 필요합니다.");
+        } else {
+          alert("북마크 추가/삭제에 실패했습니다.");
+          console.error("Bookmark error:", error);
+        }
+      }
+    },
+
+    initializeSortState() {
+      this.allCommunities.forEach((community) => {
+        this.sortState[community] = "latest";
+      });
+    },
+
+    handleSortChange(community) {
+      if (this.pagination[community]) {
+        this.pagination[community].currentPage = 1;
+      }
+      this.searchCommunityData(community);
+    },
+
+    getEndpointForSearch(sortState) {
+      switch (sortState) {
+        case "recommended":
+          return "search-today-recommended-posts";
+        case "view_count":
+          return "search-today-view-count-posts";
+        case "latest":
+        default:
+          return "search-posts";
+      }
+    },
     handleGlobalSortChange() {
-      this.communities.forEach(community => {
+      this.communities.forEach((community) => {
         if (this.pagination[community]) {
           this.pagination[community].currentPage = 1;
         }
@@ -269,27 +269,27 @@ export default {
         return;
       }
 
-      const promises = this.communities.map(community => {
+      const promises = this.communities.map((community) => {
         const pageInfo = this.pagination[community];
         return defaultInstance.get(`/glemoa-reader/${endpoint}?keyword=${this.keyword}&source=${community}&page=${pageInfo.currentPage}&pageSize=${pageInfo.pageSize}&movablePageCount=${pageInfo.movablePageCount}`);
       });
 
       Promise.all(promises)
-          .then(responses => {
-            const groupedPosts = {};
-            responses.forEach((response, index) => {
-              const community = this.communities[index];
-              const { postDtoList, postCount } = response.data;
-              groupedPosts[community] = postDtoList;
-              this.pagination[community].totalPosts = postCount;
-              this.pagination[community].totalPages = Math.ceil(postCount / this.pagination[community].pageSize);
-            });
-            this.postsByCommunity = groupedPosts;
-          })
-          .catch(error => {
-            console.error(`Error searching all communities with endpoint ${endpoint}:`, error);
-            this.error = "검색 결과를 불러오는 데 실패했습니다. 백엔드 서버 상태를 확인해주세요..";
+        .then((responses) => {
+          const groupedPosts = {};
+          responses.forEach((response, index) => {
+            const community = this.communities[index];
+            const { postDtoList, postCount } = response.data;
+            groupedPosts[community] = postDtoList;
+            this.pagination[community].totalPosts = postCount;
+            this.pagination[community].totalPages = Math.ceil(postCount / this.pagination[community].pageSize);
           });
+          this.postsByCommunity = groupedPosts;
+        })
+        .catch((error) => {
+          console.error(`Error searching all communities with endpoint ${endpoint}:`, error);
+          this.error = "검색 결과를 불러오는 데 실패했습니다. 백엔드 서버 상태를 확인해주세요..";
+        });
     },
     searchCommunityData(community) {
       const sortState = this.sortState[community] || this.globalSortState;
@@ -298,17 +298,17 @@ export default {
       let url = `/glemoa-reader/${endpoint}?keyword=${this.keyword}&source=${community}&page=${pageInfo.currentPage}&pageSize=${pageInfo.pageSize}&movablePageCount=${pageInfo.movablePageCount}`;
 
       defaultInstance
-          .get(url)
-          .then(response => {
-            const { postDtoList, postCount } = response.data;
-            this.postsByCommunity[community] = postDtoList;
-            this.pagination[community].totalPosts = postCount;
-            this.pagination[community].totalPages = Math.ceil(postCount / this.pagination[community].pageSize);
-          })
-          .catch(error => {
-            console.error(`Error searching for ${community}:`, error);
-            alert(`${community} 검색 결과를 불러오는 중 오류가 발생했습니다.`);
-          });
+        .get(url)
+        .then((response) => {
+          const { postDtoList, postCount } = response.data;
+          this.postsByCommunity[community] = postDtoList;
+          this.pagination[community].totalPosts = postCount;
+          this.pagination[community].totalPages = Math.ceil(postCount / this.pagination[community].pageSize);
+        })
+        .catch((error) => {
+          console.error(`Error searching for ${community}:`, error);
+          alert(`${community} 검색 결과를 불러오는 중 오류가 발생했습니다.`);
+        });
     },
     refreshCommunity(community) {
       this.handleSortChange(community);
@@ -321,7 +321,7 @@ export default {
     },
     highlightKeyword(title) {
       if (!this.keyword || !title) return title;
-      const regex = new RegExp(this.keyword, 'gi');
+      const regex = new RegExp(this.keyword, "gi");
       return title.replace(regex, (match) => `<span class="highlight">${match}</span>`);
     },
     formatTimeAgo(dateString) {
@@ -532,31 +532,31 @@ ul {
 }
 
 .pagination-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 .pagination-container button {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    border-radius: 4px;
-    padding: 4px 8px;
-    cursor: pointer;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
 }
 
 .pagination-container button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .pagination-container button.active {
-    font-weight: bold;
-    border-color: var(--link-active-color);
-    color: var(--link-active-color);
+  font-weight: bold;
+  border-color: var(--link-active-color);
+  color: var(--link-active-color);
 }
 
 /* Responsive styles for mobile */
