@@ -258,8 +258,26 @@ header {
 
 /* Responsive styles for mobile */
 @media (max-width: 600px) {
+  /* ⭐️ header padding 조정 */
+  header {
+    padding: 15px 10px;
+  }
+
   .search-container {
-    width: 65%; /* Make search bar wider on mobile */
+    /* ⭐️ 모바일에서 90%~95% 정도로 설정하여 좌우 여백을 최소화합니다. */
+    width: 90%;
+
+    /* ⭐️ 모바일에서는 max-width가 불필요하며, 
+       현재 .search-container에 적용된 max-width: 600px을 무시해야 합니다. */
+    max-width: none;
+
+    /* 필요하다면 내부 padding도 조금 줄여서 높이를 낮출 수 있습니다. */
+    padding: 3px;
+  }
+
+  /* input의 padding도 필요하다면 조정할 수 있습니다. */
+  .search-input {
+    padding: 8px 15px;
   }
 }
 
