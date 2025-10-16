@@ -29,11 +29,12 @@
       </footer>
     </div>
     <SettingsModal :show="showSettingsModal" :currentPageSize="settings.globalPageSize" :currentTheme="theme" @close="showSettingsModal = false" @page-size-changed="handlePageSizeChanged" @set-theme="setTheme" />
+    <button v-if="showScrollToTopButton" @click="scrollToTop" class="scroll-to-top-btn">↑</button>
   </div>
 </template>
 
 <script>
-import { ref, watch, provide, onMounted, reactive } from "vue";
+import { ref, watch, provide, onMounted, reactive, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import darkModeIcon from "@/assets/images/dark_mode.png";
 import lightModeIcon from "@/assets/images/light_mode.png";
@@ -77,7 +78,6 @@ export default {
       router.push("/");
     };
     watch(route, checkLoginStatus, { immediate: true, deep: true });
-    onMounted(checkLoginStatus);
 
     // Settings Modal Management
     const showSettingsModal = ref(false);
@@ -95,7 +95,6 @@ export default {
       localStorage.setItem("globalPageSize", newPageSize);
       showSettingsModal.value = false;
     };
-    onMounted(loadSettings);
 
     // Provide to child components
     provide("isLoggedIn", isLoggedIn);
@@ -110,6 +109,25 @@ export default {
       }
     };
 
+    // Scroll to top button
+    const showScrollToTopButton = ref(false);
+    const handleScroll = () => {
+      showScrollToTopButton.value = window.scrollY > 200;
+    };
+    const scrollToTop = () => {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    };
+
+    onMounted(() => {
+      checkLoginStatus();
+      loadSettings();
+      window.addEventListener("scroll", handleScroll);
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener("scroll", handleScroll);
+    });
+
     return {
       theme,
       setTheme,
@@ -120,6 +138,8 @@ export default {
       handlePageSizeChanged,
       searchKeyword,
       performSearch,
+      showScrollToTopButton,
+      scrollToTop,
       // Kept for compatibility with template, though toggle is removed
       darkModeIcon,
       lightModeIcon,
@@ -153,9 +173,13 @@ export default {
   --text-secondary: #adb5bd;
   --border-color: #424242;
   --header-bg: #333333;
-  --header-text: #4285f4;
-  --link-active-color: #4285f4;
   --button-text: #ffffff;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 /* Global styles */
@@ -165,31 +189,22 @@ body {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Key for app-shell layout: prevent the whole page from scrolling */
-  height: 100%;
   width: 100%;
-  overflow: hidden;
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color 0.3s, color 0.3s;
+  overflow-x: hidden;
 }
 
 #app {
-  display: flex;
-  flex-direction: column;
-  height: 100%; /* Fill the entire viewport height */
   background-color: var(--bg-primary);
 }
 
 /* Header & Nav */
 .sticky-header {
-  flex-shrink: 0; /* Prevent header from shrinking */
-  position: sticky;
-  top: 0;
-  z-index: 100;
   background-color: var(--bg-primary);
 }
 
@@ -326,9 +341,6 @@ nav a.router-link-exact-active {
 
 /* Main Content Area */
 .main-content-wrapper {
-  flex: 1; /* Take up all available space */
-  overflow-y: auto; /* Enable vertical scrolling for this container only */
-  overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
 main {
@@ -380,5 +392,52 @@ footer {
 .light .community-logo[src*="clien"],
 .light .community-logo[src*="theqoo"] {
   filter: brightness(0);
+}
+
+.scroll-to-top-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+
+  /* 깔끔한 흰색 배경 */
+  background-color: var(--bg-primary, #ffffff);
+
+  /* 아이콘/텍스트는 토스 파란색 */
+  color: var(--link-active-color);
+
+  border: none;
+  /* 부드러운 네모 박스 */
+  border-radius: 8px;
+
+  /* ⭐️ 박스 크기 조정: 50px -> 44px */
+  width: 44px;
+  height: 44px;
+
+  /* ⭐️ 화살표 크기 조정: 20px -> 24px (더 크게) */
+  font-size: 24px;
+  font-weight: 700;
+
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  /* 깔끔하고 부드러운 그림자 */
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1); /* 그림자도 살짝 줄여서 깔끔하게 */
+  transition: all 0.2s ease-out;
+}
+
+.scroll-to-top-btn:hover {
+  /* 호버 시 살짝 위로 떠오르는 느낌 */
+  transform: translateY(-2px);
+  /* 호버 시 그림자를 살짝 더 진하게 */
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 다크 모드 스타일 유지 */
+.dark .scroll-to-top-btn {
+  background-color: var(--bg-secondary);
+  color: var(--link-active-color);
 }
 </style>
