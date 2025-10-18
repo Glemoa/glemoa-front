@@ -5,7 +5,7 @@
       <ul>
         <li v-for="post in posts" :key="post.id + post.source" class="post-item">
           <div class="post-title">
-            <a :href="post.link" target="_blank">{{ post.title }}</a>
+            <a :href="post.link" target="_blank" @click="increaseViewCount(post.id)">{{ post.title }}</a>
             <span class="comment-count"> [{{ post.commentCount }}]</span>
           </div>
           <div class="post-details">
@@ -36,7 +36,7 @@
 </template>
 
 <script>
-import { authInstance } from "@/api";
+import { authInstance, defaultInstance } from "@/api";
 
 export default {
   name: "BookmarkedPostsView",
@@ -58,6 +58,13 @@ export default {
     this.fetchBookmarkedPosts(this.pagination.currentPage);
   },
   methods: {
+    async increaseViewCount(postId) {
+      try {
+        await defaultInstance.post(`/glemoa-view-count-rank/views/${postId}`);
+      } catch (error) {
+        console.error("Error increasing view count:", error);
+      }
+    },
     async fetchBookmarkedPosts(page) {
       try {
         const response = await authInstance.get(`/glemoa-member/bookMark/viewBookMarkPost?page=${page}&pageSize=${this.pagination.pageSize}&movablePageCount=${this.pagination.movablePageCount}`);

@@ -6,6 +6,7 @@
           <input type="text" v-model="searchKeyword" @keyup.enter="performSearch" placeholder="Glemoa에서 검색..." class="search-input" />
           <button @click="performSearch" class="search-button"><img class="search-icon" :src="researchIcon" alt="Search" /></button>
         </div>
+        <DailyRankView :isMobile="isMobile" />
       </header>
       <nav>
         <div class="nav-buttons-left">
@@ -40,11 +41,13 @@ import darkModeIcon from "@/assets/images/dark_mode.png";
 import lightModeIcon from "@/assets/images/light_mode.png";
 import researchIcon from "@/assets/images/research.svg";
 import SettingsModal from "@/components/SettingsModal.vue";
+import DailyRankView from "@/components/DailyRankView.vue";
 
 export default {
   name: "App",
   components: {
     SettingsModal,
+    DailyRankView,
   },
   setup() {
     // Theme Management
@@ -118,14 +121,21 @@ export default {
       window.scrollTo({ top: 0, behavior: "auto" });
     };
 
+    const isMobile = ref(window.innerWidth <= 600);
+    const handleResize = () => {
+      isMobile.value = window.innerWidth <= 600;
+    };
+
     onMounted(() => {
       checkLoginStatus();
       loadSettings();
       window.addEventListener("scroll", handleScroll);
+      window.addEventListener("resize", handleResize);
     });
 
     onUnmounted(() => {
       window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
     });
 
     return {
@@ -140,6 +150,7 @@ export default {
       performSearch,
       showScrollToTopButton,
       scrollToTop,
+      isMobile,
       // Kept for compatibility with template, though toggle is removed
       darkModeIcon,
       lightModeIcon,
@@ -216,6 +227,7 @@ header {
   justify-content: center; /* Center horizontally */
   align-items: center; /* Center vertically */
   transition: background-color 0.3s, color 0.3s;
+  position: relative;
 }
 
 .search-container {
@@ -276,6 +288,7 @@ header {
   /* ⭐️ header padding 조정 */
   header {
     padding: 15px 10px;
+    flex-direction: column;
   }
 
   .search-container {
