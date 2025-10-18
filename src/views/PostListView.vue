@@ -38,7 +38,7 @@
         <ul>
           <li v-for="post in posts" :key="post.id + post.source" class="post-item">
             <div class="post-title">
-              <a :href="post.link" target="_blank">{{ post.title }}</a>
+              <a :href="post.link" target="_blank" @click="increaseViewCount(post.id)">{{ post.title }}</a>
               <span class="comment-count"> [{{ post.commentCount }}]</span>
             </div>
             <div class="post-details">
@@ -296,6 +296,13 @@ export default {
       if (newPage > 0 && newPage <= this.pagination[community].totalPages) {
         this.pagination[community].currentPage = newPage;
         this.fetchCommunityData(community, this.getEndpointForSortState(this.sortState[community]));
+      }
+    },
+    async increaseViewCount(postId) {
+      try {
+        await defaultInstance.post(`/glemoa-view-count-rank/views/${postId}`);
+      } catch (error) {
+        console.error("Error increasing view count:", error);
       }
     },
     formatTimeAgo(dateString) {
