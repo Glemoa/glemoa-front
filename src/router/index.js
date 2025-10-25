@@ -4,6 +4,8 @@ import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
 import BookmarkedPostsView from "../views/BookmarkedPostsView.vue";
 import SearchView from "../views/SearchView.vue"; // Import SearchView
+import GoogleRedirect from "../components/GoogleRedirect.vue";
+import KakaoRedirect from "../components/KakaoRedirect.vue";
 
 const routes = [
   {
@@ -31,6 +33,14 @@ const routes = [
     path: "/search", // Add search route
     name: "Search",
     component: SearchView,
+  },
+  {
+    path: "/oauth/google/redirect",
+    component: GoogleRedirect,
+  },
+  {
+    path: "/oauth/kakao/redirect",
+    component: KakaoRedirect,
   },
 ];
 

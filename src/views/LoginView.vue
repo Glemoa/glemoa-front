@@ -13,6 +13,17 @@
       <button type="submit">로그인</button>
     </form>
     <button @click="goToRegister" class="register-btn">회원가입</button>
+    <div class="or-divider-container">
+      <span class="or-text">OR</span>
+    </div>
+    <div class="social-login-container">
+      <div @click="handleGoogleLogin" class="social-login-circle google-circle">
+        <img src="../assets/images/Google_logo.svg" alt="Google Logo" class="social-login-logo" />
+      </div>
+      <div @click="handleKakaoLogin" class="social-login-circle kakao-circle">
+        <img src="../assets/images/KakaoTalk_logo.svg" alt="Kakao Logo" class="social-login-logo" />
+      </div>
+    </div>
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
   </div>
 </template>
@@ -27,6 +38,18 @@ export default {
       email: "",
       password: "",
       errorMessage: "",
+      googleUrl: "https://accounts.google.com/o/oauth2/auth",
+      googleClientId: "1016866503845-g2stk5ilu15a3i4qj492md1lk85s76v4.apps.googleusercontent.com",
+      googleRedirectUrl: "http://www.glemoa.shop/oauth/google/redirect",
+      // 인가코드로 받겠다는 설정
+      googleResponseType: "code",
+      // openid는 요청하지 않아도 기본적으로 제공한다. email과 profile은 요청시 제공
+      googleScope: "openid email profile",
+
+      kakaoClientId: "4c59ef5dce393223983be904010b1b73",
+      kakaoUrl: "https://kauth.kakao.com/oauth/authorize",
+      kakaoResponseType: "code",
+      kakaoRedirectUrl: "http://www.glemoa.shop/oauth/kakao/redirect",
     };
   },
   methods: {
@@ -47,6 +70,15 @@ export default {
     },
     goToRegister() {
       this.$router.push("/register");
+    },
+    handleGoogleLogin() {
+      // 로그인을 하고 나면 우리 화면으로 redirect가 될 거다.
+      const auth_uri = `${this.googleUrl}?client_id=${this.googleClientId}&redirect_uri=${this.googleRedirectUrl}&response_type=${this.googleResponseType}&scope=${this.googleScope}`;
+      window.location.href = auth_uri;
+    },
+    handleKakaoLogin() {
+      const auth_uri = `${this.kakaoUrl}?client_id=${this.kakaoClientId}&redirect_uri=${this.kakaoRedirectUrl}&response_type=${this.kakaoResponseType}`;
+      window.location.href = auth_uri;
     },
   },
 };
@@ -138,5 +170,73 @@ button:hover {
   border-radius: 8px;
   font-size: 16px;
   cursor: pointer;
+}
+
+.or-divider-container {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+  margin: 20px 0;
+}
+
+.or-divider-container::before,
+.or-divider-container::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.or-divider-container:not(:empty)::before {
+  margin-right: 0.25em;
+}
+
+.or-divider-container:not(:empty)::after {
+  margin-left: 0.25em;
+}
+
+.or-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  padding: 0 10px;
+}
+
+.social-login-container {
+  display: flex;
+  justify-content: center;
+  gap: 20px; /* Space between buttons */
+  margin-top: 20px;
+}
+
+.social-login-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease-in-out;
+}
+
+.social-login-circle:hover {
+  transform: scale(1.05);
+}
+
+.google-circle {
+  background-color: #ffffff;
+  border: 1px solid #dadce0;
+}
+
+.kakao-circle {
+  background-color: #fee500;
+}
+
+.social-login-logo {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
 }
 </style>
