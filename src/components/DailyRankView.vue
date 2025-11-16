@@ -48,7 +48,7 @@ export default {
     this.fetchDailyRank();
     this.polling = setInterval(() => {
       this.fetchDailyRank();
-    }, 60000);
+    }, 600000);
   },
   beforeUnmount() {
     clearInterval(this.polling);
