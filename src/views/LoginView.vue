@@ -40,7 +40,7 @@ export default {
       errorMessage: "",
       googleUrl: "https://accounts.google.com/o/oauth2/auth",
       googleClientId: "1016866503845-g2stk5ilu15a3i4qj492md1lk85s76v4.apps.googleusercontent.com",
-      googleRedirectUrl: "https://www.glemoa.shop/oauth/google/redirect",
+      googleRedirectUrl: process.env.VUE_APP_GOOGLE_REDIRECT_URI,
       // 인가코드로 받겠다는 설정
       googleResponseType: "code",
       // openid는 요청하지 않아도 기본적으로 제공한다. email과 profile은 요청시 제공
@@ -49,7 +49,7 @@ export default {
       kakaoClientId: "4c59ef5dce393223983be904010b1b73",
       kakaoUrl: "https://kauth.kakao.com/oauth/authorize",
       kakaoResponseType: "code",
-      kakaoRedirectUrl: "https://www.glemoa.shop/oauth/kakao/redirect",
+      kakaoRedirectUrl: process.env.VUE_APP_KAKAO_REDIRECT_URI,
     };
   },
   methods: {
