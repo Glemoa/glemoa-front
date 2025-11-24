@@ -22,7 +22,7 @@
         </div>
 
         <div class="modal-footer">
-          <button @click="onPageSizeChange" class="btn btn-primary">저장</button>
+          <button @click="saveSettings" class="btn btn-primary">저장</button>
         </div>
       </div>
     </div>
@@ -62,13 +62,18 @@ export default {
   },
   methods: {
     close() {
+      this.selectedPageSize = this.currentPageSize;
+      this.selectedTheme = this.currentTheme;
       this.$emit("close");
     },
-    onPageSizeChange() {
+    saveSettings() {
       if (this.selectedPageSize > 0 && this.selectedPageSize <= 100) {
         this.$emit("page-size-changed", this.selectedPageSize);
+        this.close();
       } else {
-        alert("1에서 100 사이의 값을 입력해주세요.");
+        // This relies on a global toast function, which might need to be injected
+        // For simplicity, we'll leave it as is, but a dedicated notification service would be better
+        alert("페이지당 게시물 수는 1에서 100 사이의 값을 입력해주세요.");
       }
     },
     setTheme(theme) {
@@ -164,11 +169,14 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .setting-item label {
   font-weight: 500;
   color: var(--text-primary);
+  margin-bottom: 8px;
+  width: 100%;
 }
 
 .form-input {

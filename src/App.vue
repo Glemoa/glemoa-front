@@ -17,6 +17,19 @@
         <router-link v-if="!isLoggedIn" to="/login">로그인</router-link>
         <a v-else @click="logout" href="#">로그아웃</a>
         <div class="nav-buttons">
+          <div v-if="isLoggedIn" class="notification-container" ref="notificationContainer">
+            <button @click="toggleNotificationDropdown" class="notification-btn">
+              <img :src="alarmIcon" alt="알림" class="notification-icon" />
+              <span v-if="unreadCount > 0" class="notification-badge">{{ unreadCount }}</span>
+            </button>
+            <NotificationDropdown 
+              :show="showNotificationDropdown"
+              :currentKeywords="keywords"
+              @keywords-changed="handleKeywordsChanged"
+              @notification-read="fetchUnreadCount"
+              @notifications-all-read="fetchUnreadCount"
+            />
+          </div>
           <!-- Theme toggle button removed -->
         </div>
       </nav>
@@ -29,27 +42,60 @@
         <p>&copy; 2025 Glemoa</p>
       </footer>
     </div>
-    <SettingsModal :show="showSettingsModal" :currentPageSize="settings.globalPageSize" :currentTheme="theme" @close="showSettingsModal = false" @page-size-changed="handlePageSizeChanged" @set-theme="setTheme" />
+    <SettingsModal
+      :show="showSettingsModal"
+      :currentPageSize="settings.globalPageSize"
+      :currentTheme="theme"
+      @close="showSettingsModal = false"
+      @page-size-changed="handlePageSizeChanged"
+      @set-theme="setTheme"
+    />
     <button v-if="showScrollToTopButton" @click="scrollToTop" class="scroll-to-top-btn">↑</button>
+    <div class="toast-container">
+      <transition-group name="toast-fade">
+        <Toast v-for="toast in toasts" :key="toast.id" :message="toast.message" :type="toast.type" :duration="toast.duration" @close="removeToast(toast.id)" />
+      </transition-group>
+    </div>
   </div>
 </template>
 
 <script>
+import { authInstance } from "@/api";
 import { ref, watch, provide, onMounted, reactive, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import darkModeIcon from "@/assets/images/dark_mode.png";
 import lightModeIcon from "@/assets/images/light_mode.png";
 import researchIcon from "@/assets/images/research.svg";
+import alarmIcon from "@/assets/images/alarm.svg";
 import SettingsModal from "@/components/SettingsModal.vue";
 import DailyRankView from "@/components/DailyRankView.vue";
+import Toast from "@/components/Toast.vue";
+import NotificationDropdown from "@/components/NotificationDropdown.vue";
+import { countUnread } from "@/api/notification";
+import { EventSourcePolyfill } from "event-source-polyfill";
 
 export default {
   name: "App",
   components: {
     SettingsModal,
     DailyRankView,
+    Toast,
+    NotificationDropdown,
   },
   setup() {
+    // Toast Management
+    const toasts = ref([]);
+    let toastId = 0;
+    const showToast = (message, options = {}) => {
+      const { type = "info", duration = 3000 } = options;
+      const id = toastId++;
+      toasts.value.push({ id, message, type, duration });
+    };
+    const removeToast = (id) => {
+      toasts.value = toasts.value.filter((toast) => toast.id !== id);
+    };
+    provide("showToast", showToast);
+
     // Theme Management
     const theme = ref(localStorage.getItem("theme") || "light");
     const setTheme = (newTheme) => {
@@ -78,6 +124,8 @@ export default {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       isLoggedIn.value = false;
+      keywords.value = []; // Clear keywords on logout
+      unreadCount.value = 0; // Clear notification count on logout
       router.push("/");
     };
     watch(route, checkLoginStatus, { immediate: true, deep: true });
@@ -87,6 +135,20 @@ export default {
     const settings = reactive({
       globalPageSize: 10,
     });
+    const keywords = ref([]);
+
+    const fetchKeywords = async () => {
+      if (isLoggedIn.value) {
+        try {
+          const response = await authInstance.get("/glemoa-member/keyword/memberAll");
+          keywords.value = response.data;
+        } catch (error) {
+          console.error("키워드 목록을 불러오는데 실패했습니다.", error);
+          showToast("키워드 목록을 불러오는데 실패했습니다.", { type: "error" });
+        }
+      }
+    };
+
     const loadSettings = () => {
       const savedPageSize = localStorage.getItem("globalPageSize");
       if (savedPageSize) {
@@ -96,7 +158,10 @@ export default {
     const handlePageSizeChanged = (newPageSize) => {
       settings.globalPageSize = newPageSize;
       localStorage.setItem("globalPageSize", newPageSize);
-      showSettingsModal.value = false;
+    };
+
+    const handleKeywordsChanged = () => {
+      fetchKeywords();
     };
 
     // Provide to child components
@@ -126,16 +191,128 @@ export default {
       isMobile.value = window.innerWidth <= 600;
     };
 
+    // Notification Management
+    const unreadCount = ref(0);
+    const showNotificationDropdown = ref(false);
+    const notificationContainer = ref(null);
+
+    const fetchUnreadCount = async () => {
+      if (!isLoggedIn.value) return;
+      try {
+        unreadCount.value = await countUnread();
+      } catch (error) {
+        console.error("Failed to fetch unread notification count", error);
+      }
+    };
+
+    const toggleNotificationDropdown = () => {
+      showNotificationDropdown.value = !showNotificationDropdown.value;
+    };
+
+    const handleClickOutside = (event) => {
+      if (notificationContainer.value && !notificationContainer.value.contains(event.target)) {
+        showNotificationDropdown.value = false;
+      }
+    };
+
+    // SSE (실시간 알림 설정)
+    const eventSource = ref(null);
+    const sseRetryCount = ref(0);
+    const sseMaxRetries = 5; // Max 5 retries
+    const API_BASE_URL = process.env.VUE_APP_API_BASE_URL;
+
+    const connectSSE = (accessToken) => {
+      if (eventSource.value) {
+        eventSource.value.close();
+      }
+      eventSource.value = new EventSourcePolyfill(`${API_BASE_URL}/glemoa-member/notification/subscribe`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        heartbeatTimeout: 86400000,
+      });
+
+      eventSource.value.addEventListener("connect", (e) => {
+        console.log("SSE Connected:", e.data);
+        sseRetryCount.value = 0; // Reset retry counter on successful connection
+        fetchUnreadCount(); // Re-fetch count on successful connection
+      });
+
+      eventSource.value.addEventListener("notification", (e) => {
+        try {
+          const newItems = JSON.parse(e.data);
+          if (newItems.length > 0) {
+            showToast(`[Glemoa] ${newItems.length}개의 새 알림이 도착했습니다!`);
+            fetchUnreadCount(); // Update count when new notifications arrive
+          }
+        } catch (err) {
+          console.error("알림 데이터 파싱 오류:", err);
+        }
+      });
+
+      eventSource.value.onerror = (e) => {
+        console.error("SSE Error:", e);
+        eventSource.value.close();
+
+        // Retry logic
+        if (sseRetryCount.value < sseMaxRetries) {
+          sseRetryCount.value++;
+          setTimeout(() => {
+            console.log(`SSE 재연결 시도... (${sseRetryCount.value}/${sseMaxRetries})`);
+            connectSSE(accessToken);
+          }, 5000); // 5초 후 재시도
+        } else {
+          console.error("SSE 재연결 시도 횟수 초과.");
+        }
+      };
+    };
+
+    const disconnectSSE = () => {
+      if (eventSource.value) {
+        eventSource.value.close();
+        eventSource.value = null;
+        console.log("SSE Disconnected");
+      }
+    };
+
+    watch(
+      isLoggedIn,
+      (newStatus) => {
+        if (newStatus) {
+          const accessToken = localStorage.getItem("accessToken");
+          if (accessToken) {
+            connectSSE(accessToken);
+            fetchUnreadCount();
+            fetchKeywords(); // Fetch keywords on login
+          }
+        } else {
+          disconnectSSE();
+          unreadCount.value = 0; // Reset count on logout
+        }
+      },
+      { immediate: true }
+    );
+
     onMounted(() => {
       checkLoginStatus();
       loadSettings();
       window.addEventListener("scroll", handleScroll);
       window.addEventListener("resize", handleResize);
+      document.addEventListener("click", handleClickOutside);
     });
 
     onUnmounted(() => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", handleResize);
+      document.removeEventListener("click", handleClickOutside);
+      disconnectSSE();
+    });
+
+    // Watchers moved to the end
+    watch(showNotificationDropdown, (newVal) => {
+      if (newVal && isLoggedIn.value) {
+        fetchKeywords();
+      }
     });
 
     return {
@@ -145,16 +322,25 @@ export default {
       logout,
       showSettingsModal,
       settings,
+      keywords,
       handlePageSizeChanged,
+      handleKeywordsChanged,
       searchKeyword,
       performSearch,
       showScrollToTopButton,
       scrollToTop,
       isMobile,
-      // Kept for compatibility with template, though toggle is removed
       darkModeIcon,
       lightModeIcon,
       researchIcon,
+      alarmIcon,
+      toasts,
+      removeToast,
+      unreadCount,
+      showNotificationDropdown,
+      toggleNotificationDropdown,
+      notificationContainer,
+      fetchUnreadCount,
     };
   },
 };
@@ -452,5 +638,66 @@ footer {
 .dark .scroll-to-top-btn {
   background-color: var(--bg-secondary);
   color: var(--link-active-color);
+}
+
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  display: flex;
+  flex-direction: row; /* Changed from column to row */
+  gap: 10px;
+  align-items: flex-end; /* Align to the bottom of the container */
+  max-width: 90%; /* Limit width to prevent overflow on small screens */
+  flex-wrap: wrap; /* Allow toasts to wrap to the next line if too many */
+  justify-content: center;
+}
+
+.notification-container {
+  position: relative;
+  display: inline-block;
+  margin-left: 20px; /* Adjust spacing as needed */
+}
+
+.notification-btn {
+  background: none;
+  border: none;
+  /* font-size: 24px; Adjust icon size */
+  cursor: pointer;
+  color: var(--text-primary); /* Use theme color */
+  padding: 0;
+  line-height: 1;
+}
+
+.notification-icon {
+  width: 24px; /* Set your desired icon size */
+  height: 24px; /* Set your desired icon size */
+  vertical-align: middle; /* Align icon nicely with text/other elements */
+  filter: var(--icon-filter, invert(0)); /* Apply filter for dark mode if needed */
+}
+
+.dark .notification-icon {
+  filter: var(--icon-filter-dark, invert(1)); /* Example for dark mode */
+}
+
+.notification-btn:hover {
+  opacity: 0.8;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -10px;
+  background-color: #f44336; /* Red color for notifications */
+  color: white;
+  border-radius: 50%;
+  padding: 3px 7px;
+  font-size: 12px;
+  line-height: 1;
+  min-width: 20px;
+  text-align: center;
+  pointer-events: none; /* Allow clicks to pass through to the button */
 }
 </style>
