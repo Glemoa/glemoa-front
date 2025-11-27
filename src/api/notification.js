@@ -5,6 +5,9 @@ import { authInstance } from './index';
  * @returns {Promise<number>} 읽지 않은 알림의 개수
  */
 export const countUnread = async () => {
+    if (!localStorage.getItem('accessToken')) {
+        return 0;
+    }
     try {
         const response = await authInstance.get('/glemoa-member/notification/count-unread');
         return response.data;
@@ -19,6 +22,9 @@ export const countUnread = async () => {
  * @returns {Promise<Array>} 게시물 DTO 목록
  */
 export const getUnread = async () => {
+    if (!localStorage.getItem('accessToken')) {
+        return [];
+    }
     try {
         const response = await authInstance.get('/glemoa-member/notification/search-unread');
         return response.data;
@@ -33,6 +39,9 @@ export const getUnread = async () => {
  * @returns {Promise<Array>} 게시물 DTO 목록
  */
 export const getRead = async () => {
+    if (!localStorage.getItem('accessToken')) {
+        return [];
+    }
     try {
         const response = await authInstance.get('/glemoa-member/notification/search-read');
         return response.data;
@@ -48,6 +57,9 @@ export const getRead = async () => {
  * @returns {Promise<void>}
  */
 export const markAsRead = async (postId) => {
+    if (!localStorage.getItem('accessToken')) {
+        return;
+    }
     try {
         await authInstance.patch(`/glemoa-member/notification/read/${postId}`);
     } catch (error) {
@@ -61,6 +73,9 @@ export const markAsRead = async (postId) => {
  * @returns {Promise<void>}
  */
 export const markAllAsRead = async () => {
+    if (!localStorage.getItem('accessToken')) {
+        return;
+    }
     try {
         await authInstance.patch('/glemoa-member/notification/read-all');
     } catch (error) {
@@ -75,6 +90,9 @@ export const markAllAsRead = async () => {
  * @returns {Promise<void>}
  */
 export const deleteNotification = async (postId) => {
+    if (!localStorage.getItem('accessToken')) {
+        return;
+    }
     try {
         await authInstance.delete(`/glemoa-member/notification/delete/${postId}`);
     } catch (error) {
@@ -88,6 +106,9 @@ export const deleteNotification = async (postId) => {
  * @returns {Promise<void>}
  */
 export const deleteAllNotifications = async () => {
+    if (!localStorage.getItem('accessToken')) {
+        return;
+    }
     try {
         await authInstance.delete('/glemoa-member/notification/delete-all');
     } catch (error) {
