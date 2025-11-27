@@ -17,18 +17,12 @@
         <router-link v-if="!isLoggedIn" to="/login">로그인</router-link>
         <a v-else @click="logout" href="#">로그아웃</a>
         <div class="nav-buttons">
-          <div v-if="isLoggedIn" class="notification-container" ref="notificationContainer">
+          <div class="notification-container" ref="notificationContainer">
             <button @click="toggleNotificationDropdown" class="notification-btn">
               <img :src="alarmIcon" alt="알림" class="notification-icon" />
               <span v-if="unreadCount > 0" class="notification-badge">{{ unreadCount }}</span>
             </button>
-            <NotificationDropdown 
-              :show="showNotificationDropdown"
-              :currentKeywords="keywords"
-              @keywords-changed="handleKeywordsChanged"
-              @notification-read="fetchUnreadCount"
-              @notifications-all-read="fetchUnreadCount"
-            />
+            <NotificationDropdown :show="showNotificationDropdown" :currentKeywords="keywords" @keywords-changed="handleKeywordsChanged" @notification-read="fetchUnreadCount" @notifications-all-read="fetchUnreadCount" />
           </div>
           <!-- Theme toggle button removed -->
         </div>
@@ -42,14 +36,7 @@
         <p>&copy; 2025 Glemoa</p>
       </footer>
     </div>
-    <SettingsModal
-      :show="showSettingsModal"
-      :currentPageSize="settings.globalPageSize"
-      :currentTheme="theme"
-      @close="showSettingsModal = false"
-      @page-size-changed="handlePageSizeChanged"
-      @set-theme="setTheme"
-    />
+    <SettingsModal :show="showSettingsModal" :currentPageSize="settings.globalPageSize" :currentTheme="theme" @close="showSettingsModal = false" @page-size-changed="handlePageSizeChanged" @set-theme="setTheme" />
     <button v-if="showScrollToTopButton" @click="scrollToTop" class="scroll-to-top-btn">↑</button>
     <div class="toast-container">
       <transition-group name="toast-fade">
